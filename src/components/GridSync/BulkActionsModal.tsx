@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, ArrowUpDown, Replace, DollarSign, Tag } from "lucide-react";
+import { X, ArrowUpDown, Replace, DollarSign, Tag, Layers } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Category } from "@/hooks/useCategories";
 
-type BulkAction = "price_percent" | "price_set" | "find_replace" | "set_tags";
+type BulkAction = "price_percent" | "price_set" | "find_replace" | "set_tags" | "set_category";
 
 interface BulkActionsModalProps {
   open: boolean;
   onClose: () => void;
   selectedCount: number;
-  onApplyAction: (action: BulkAction, params: Record<string, string>) => void;
+  onApplyAction: (action: BulkAction | string, params: Record<string, string>) => void;
+  categories?: Category[];
 }
 
 const actions: { id: BulkAction; label: string; icon: React.ReactNode; description: string }[] = [
@@ -32,9 +34,10 @@ const actions: { id: BulkAction; label: string; icon: React.ReactNode; descripti
   { id: "price_set", label: "Set price", icon: <DollarSign className="w-4 h-4" />, description: "Set a fixed price for all selected products" },
   { id: "find_replace", label: "Find & Replace", icon: <Replace className="w-4 h-4" />, description: "Find and replace text in titles or descriptions" },
   { id: "set_tags", label: "Add / Remove tags", icon: <Tag className="w-4 h-4" />, description: "Add or remove tags from selected products" },
+  { id: "set_category", label: "Assign / Remove category", icon: <Layers className="w-4 h-4" />, description: "Assign or remove a category label from selected products" },
 ];
 
-export function BulkActionsModal({ open, onClose, selectedCount, onApplyAction }: BulkActionsModalProps) {
+export function BulkActionsModal({ open, onClose, selectedCount, onApplyAction, categories = [] }: BulkActionsModalProps) {
   const [selectedAction, setSelectedAction] = useState<BulkAction | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
 
@@ -136,6 +139,41 @@ export function BulkActionsModal({ open, onClose, selectedCount, onApplyAction }
                   <SelectItem value="add">Add tags</SelectItem>
                   <SelectItem value="remove">Remove tags</SelectItem>
                   <SelectItem value="replace">Replace all tags</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+      case "set_category":
+        return (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm">Category</Label>
+              {categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground mt-1">No categories created yet. Create one from the Category column in the product grid.</p>
+              ) : (
+                <Select value={params.categoryId || ""} onValueChange={(v) => setParams({ ...params, categoryId: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div>
+              <Label className="text-sm">Action</Label>
+              <Select value={params.action || "add"} onValueChange={(v) => setParams({ ...params, action: v })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="add">Assign category</SelectItem>
+                  <SelectItem value="remove">Remove category</SelectItem>
                 </SelectContent>
               </Select>
             </div>

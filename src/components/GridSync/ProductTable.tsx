@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Product } from "@/data/mockProducts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnKey } from "@/components/GridSync/EditorToolbar";
 import { Badge } from "@/components/ui/badge";
+import { Category } from "@/hooks/useCategories";
+import { Plus, X } from "lucide-react";
 
 interface ProductTableProps {
   products: Product[];
@@ -12,6 +14,11 @@ interface ProductTableProps {
   onCellChange: (productId: string, field: string, value: unknown) => void;
   visibleColumns: ColumnKey[];
   showBefore?: boolean;
+  categories?: Category[];
+  getProductCategories?: (productId: string) => Category[];
+  onAssignCategory?: (productId: string, categoryId: string) => void;
+  onUnassignCategory?: (productId: string, categoryId: string) => void;
+  onCreateCategory?: (name: string) => Promise<Category | null>;
 }
 
 function InventoryBadge({ count }: { count: number }) {
@@ -82,7 +89,109 @@ function EditableCell({
   );
 }
 
+function CategoryCell({
+  productId,
+  productCategories,
+  allCategories,
+  onAssign,
+  onUnassign,
+  onCreate,
+}: {
+  productId: string;
+  productCategories: Category[];
+  allCategories: Category[];
+  onAssign?: (productId: string, categoryId: string) => void;
+  onUnassign?: (productId: string, categoryId: string) => void;
+  onCreate?: (name: string) => Promise<Category | null>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const unassigned = allCategories.filter((c) => !productCategories.some((pc) => pc.id === c.id));
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="flex flex-wrap gap-1 items-center min-h-[24px]">
+        {productCategories.map((cat) => (
+          <span
+            key={cat.id}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white"
+            style={{ backgroundColor: cat.color }}
+          >
+            {cat.name}
+            <button
+              onClick={(e) => { e.stopPropagation(); onUnassign?.(productId, cat.id); }}
+              className="hover:bg-white/20 rounded-full"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-5 h-5 rounded-full border border-dashed border-muted-foreground/40 flex items-center justify-center hover:bg-muted transition-colors"
+        >
+          <Plus className="w-3 h-3 text-muted-foreground" />
+        </button>
+      </div>
+      {open && (
+        <div className="absolute z-30 top-full left-0 mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
+          {unassigned.length > 0 && (
+            <div className="max-h-32 overflow-auto">
+              {unassigned.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => { onAssign?.(productId, cat.id); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left"
+                >
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="border-t border-border px-2 py-1.5">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newName.trim() || !onCreate) return;
+                const cat = await onCreate(newName.trim());
+                if (cat) {
+                  onAssign?.(productId, cat.id);
+                  setNewName("");
+                }
+              }}
+              className="flex gap-1"
+            >
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="New category..."
+                className="flex-1 px-2 py-1 text-xs bg-card border border-input rounded text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+              <button type="submit" className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90">
+                Add
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const columnConfig: Record<ColumnKey, { label: string; width?: string }> = {
+  image: { label: "Image", width: "w-14" },
   title: { label: "Title", width: "min-w-[180px] max-w-[240px]" },
   description: { label: "Description", width: "min-w-[200px] max-w-[300px]" },
   sku: { label: "SKU", width: "w-24" },
@@ -91,6 +200,7 @@ const columnConfig: Record<ColumnKey, { label: string; width?: string }> = {
   inventory: { label: "Inventory", width: "w-28" },
   status: { label: "Status", width: "w-20" },
   vendor: { label: "Vendor", width: "w-24" },
+  category: { label: "Category", width: "min-w-[160px]" },
   tags: { label: "Tags", width: "min-w-[140px]" },
   seoTitle: { label: "SEO Title", width: "min-w-[180px] max-w-[240px]" },
   productType: { label: "Type", width: "w-24" },
@@ -105,6 +215,11 @@ export function ProductTable({
   onCellChange,
   visibleColumns,
   showBefore = false,
+  categories = [],
+  getProductCategories,
+  onAssignCategory,
+  onUnassignCategory,
+  onCreateCategory,
 }: ProductTableProps) {
   const allSelected = products.length > 0 && selectedIds.size === products.length;
 
@@ -130,6 +245,14 @@ export function ProductTable({
 
   const renderCell = (p: Product, col: ColumnKey) => {
     switch (col) {
+      case "image":
+        return p.imageUrl ? (
+          <img src={p.imageUrl} alt={p.title} className="w-10 h-10 rounded object-cover border border-border" />
+        ) : (
+          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-[10px]">
+            No img
+          </div>
+        );
       case "title":
         return (
           <EditableCell value={String(getDisplayValue(p, "title") || "")} isChanged={!showBefore && isChanged(p.id, "title")}
@@ -162,6 +285,19 @@ export function ProductTable({
         return <StatusBadge status={p.status} />;
       case "vendor":
         return <span className="text-muted-foreground text-xs truncate">{p.vendor}</span>;
+      case "category": {
+        const productCats = getProductCategories?.(p.id) || [];
+        return (
+          <CategoryCell
+            productId={p.id}
+            productCategories={productCats}
+            allCategories={categories}
+            onAssign={onAssignCategory}
+            onUnassign={onUnassignCategory}
+            onCreate={onCreateCategory}
+          />
+        );
+      }
       case "tags": {
         const tags = (showBefore ? p.tags : (getDisplayValue(p, "tags") as string[] || p.tags));
         return (
