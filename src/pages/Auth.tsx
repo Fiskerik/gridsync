@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import syncroniceLogo from "@/assets/syncronice-logo.jpg";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
