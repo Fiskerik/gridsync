@@ -3,6 +3,7 @@ import { Product } from "@/data/mockProducts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnKey } from "@/components/GridSync/EditorToolbar";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Category } from "@/hooks/useCategories";
 import { Plus, X } from "lucide-react";
 
