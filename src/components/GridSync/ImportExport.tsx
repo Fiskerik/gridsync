@@ -11,12 +11,23 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/data/mockProducts";
 import { ShopifyStore, ShopifyPushResult } from "@/hooks/useSupabaseProducts";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type SyncStatus = "idle" | "syncing" | "pushing" | "done" | "error";
 
@@ -77,11 +88,13 @@ export function ImportExport({
   const [newShopDomain, setNewShopDomain] = useState("");
   const [connecting, setConnecting] = useState(false);
 
+  // Delete confirmation state
+  const [deleteConfirmStore, setDeleteConfirmStore] = useState<ShopifyStore | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+
   // Reset sync status when changed cells change so push button isn't stuck
   useEffect(() => {
-    if (syncStatus === "done" || syncStatus === "error") {
-      setSyncStatus("idle");
-    }
+    setSyncStatus((prev) => (prev === "done" || prev === "error") ? "idle" : prev);
   }, [changedCells]);
 
   const handleConnectStore = useCallback(async () => {
@@ -93,10 +106,7 @@ export function ImportExport({
     try {
       const authUrl = await connectStore(newShopDomain.trim());
       if (authUrl) {
-        // Open OAuth in a popup
         const popup = window.open(authUrl, "shopify-oauth", "width=600,height=700,scrollbars=yes");
-
-        // Listen for OAuth completion
         const handleMessage = (event: MessageEvent) => {
           if (event.data?.type === "shopify-oauth-success") {
             window.removeEventListener("message", handleMessage);
@@ -107,8 +117,6 @@ export function ImportExport({
           }
         };
         window.addEventListener("message", handleMessage);
-
-        // Cleanup if popup is closed manually
         const checkClosed = setInterval(() => {
           if (popup?.closed) {
             clearInterval(checkClosed);
@@ -125,6 +133,13 @@ export function ImportExport({
       setConnecting(false);
     }
   }, [newShopDomain, connectStore, onStoreConnected]);
+
+  const handleDeleteStore = useCallback(async () => {
+    if (!deleteConfirmStore) return;
+    await disconnectStore(deleteConfirmStore.id);
+    setDeleteConfirmStore(null);
+    setDeleteConfirmInput("");
+  }, [deleteConfirmStore, disconnectStore]);
 
   const handleImportFromShopify = useCallback(async (storeId: string) => {
     setSyncStatus("syncing");
@@ -161,24 +176,18 @@ export function ImportExport({
       if (succeeded === 0 && failed > 0) {
         setSyncStatus("error");
         setSyncResult(firstError || `${failed}/${total} products failed to update`);
-        toast.error("Push failed", {
-          description: firstError || `All ${failed} products failed to update`,
-        });
+        toast.error("Push failed", { description: firstError || `All ${failed} products failed to update` });
         return;
       }
 
       if (failed > 0) {
         setSyncStatus("done");
         setSyncResult(`${succeeded} products updated, ${failed} failed${firstError ? ` · ${firstError}` : ""}`);
-        toast.warning("Push partially completed", {
-          description: `${succeeded} updated, ${failed} failed`,
-        });
+        toast.warning("Push partially completed", { description: `${succeeded} updated, ${failed} failed` });
       } else {
         setSyncStatus("done");
         setSyncResult(`${succeeded} products updated`);
-        toast.success("Pushed changes to Shopify", {
-          description: `${succeeded} products updated successfully`,
-        });
+        toast.success("Pushed changes to Shopify", { description: `${succeeded} products updated successfully` });
       }
 
       onPushComplete?.();
@@ -206,6 +215,8 @@ export function ImportExport({
     0
   );
 
+  const pushDisabled = syncStatus === "syncing" || syncStatus === "pushing" || changedCells.size === 0;
+
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto">
       <div className="mb-8">
@@ -229,17 +240,12 @@ export function ImportExport({
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddStore(!showAddStore)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowAddStore(!showAddStore)}>
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             Add Store
           </Button>
         </div>
 
-        {/* Add Store Form */}
         {showAddStore && (
           <div className="border border-dashed border-border rounded-lg p-4 mb-4 bg-muted/30">
             <p className="text-xs text-muted-foreground mb-2">
@@ -253,23 +259,14 @@ export function ImportExport({
                 className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 onKeyDown={(e) => e.key === "Enter" && handleConnectStore()}
               />
-              <Button
-                size="sm"
-                onClick={handleConnectStore}
-                disabled={connecting || !newShopDomain.trim()}
-              >
-                {connecting ? (
-                  <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                )}
+              <Button size="sm" onClick={handleConnectStore} disabled={connecting || !newShopDomain.trim()}>
+                {connecting ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5 mr-1.5" />}
                 {connecting ? "Connecting..." : "Connect via OAuth"}
               </Button>
             </div>
           </div>
         )}
 
-        {/* Store List */}
         {stores.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             No stores connected yet. Click "Add Store" to connect your first Shopify store.
@@ -277,18 +274,11 @@ export function ImportExport({
         ) : (
           <div className="space-y-2">
             {stores.map((store) => (
-              <div
-                key={store.id}
-                className="flex items-center gap-3 px-3 py-2.5 border border-border rounded-md bg-background"
-              >
+              <div key={store.id} className="flex items-center gap-3 px-3 py-2.5 border border-border rounded-md bg-background">
                 <span className="w-2 h-2 rounded-full bg-success shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {store.store_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {store.shop_domain}
-                  </p>
+                  <p className="text-sm font-medium text-foreground truncate">{store.store_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{store.shop_domain}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -297,18 +287,17 @@ export function ImportExport({
                     onClick={() => handleImportFromShopify(store.id)}
                     disabled={syncStatus === "syncing" || syncStatus === "pushing"}
                   >
-                    {syncingStoreId === store.id ? (
-                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Download className="w-3 h-3 mr-1" />
-                    )}
+                    {syncingStoreId === store.id ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
                     Sync
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => disconnectStore(store.id)}
+                    onClick={() => {
+                      setDeleteConfirmStore(store);
+                      setDeleteConfirmInput("");
+                    }}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
@@ -330,27 +319,23 @@ export function ImportExport({
             <p className="text-xs text-muted-foreground mt-0.5">
               Send your staged edits back to Shopify. Only changed fields will be updated.
             </p>
-            {stagedChanges > 0 && (
+            {stagedChanges > 0 ? (
               <Badge variant="secondary" className="mt-1.5 text-[10px]">
                 {stagedChanges} pending changes across {changedCells.size} products
               </Badge>
+            ) : (
+              <p className="text-[11px] text-muted-foreground mt-1.5 italic">
+                No changes staged. Edit products in the Bulk Editor tab first.
+              </p>
             )}
           </div>
           <Button
             size="sm"
             onClick={handlePushToShopify}
-            disabled={
-              syncStatus === "syncing" ||
-              syncStatus === "pushing" ||
-              changedCells.size === 0
-            }
+            disabled={pushDisabled}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {syncStatus === "pushing" ? (
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <Upload className="w-3.5 h-3.5 mr-1.5" />
-            )}
+            {syncStatus === "pushing" ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
             {syncStatus === "pushing" ? "Pushing..." : "Push to Shopify"}
           </Button>
         </div>
@@ -399,6 +384,48 @@ export function ImportExport({
           </div>
         </div>
       )}
+
+      {/* Delete Store Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmStore} onOpenChange={(open) => { if (!open) { setDeleteConfirmStore(null); setDeleteConfirmInput(""); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-destructive" />
+              Disconnect Store
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This will permanently disconnect <strong className="text-foreground">{deleteConfirmStore?.store_name}</strong> and remove all its synced products from GridSync.
+                </p>
+                <p>
+                  To confirm, type the store name below:
+                </p>
+                <div className="px-3 py-2 bg-muted rounded-md text-sm font-mono text-foreground text-center">
+                  {deleteConfirmStore?.store_name}
+                </div>
+                <input
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  placeholder="Type store name to confirm..."
+                  className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive"
+                  autoFocus
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteStore}
+              disabled={deleteConfirmInput !== deleteConfirmStore?.store_name}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              Disconnect Store
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

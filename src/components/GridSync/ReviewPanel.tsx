@@ -71,37 +71,14 @@ function getValidationWarnings(products: Product[], changedCells: Map<string, Re
     if (changes.price !== undefined) {
       const price = Number(changes.price);
       if (Number.isNaN(price)) {
-        warnings.push({
-          productId,
-          productTitle: product.title,
-          field: "Price",
-          message: "Price format is invalid",
-          severity: "error",
-        });
+        warnings.push({ productId, productTitle: product.title, field: "Price", message: "Price format is invalid", severity: "error" });
       } else {
         if (price <= 0) {
-          warnings.push({
-            productId,
-            productTitle: product.title,
-            field: "Price",
-            message: "Price is $0 or negative",
-            severity: "error",
-            fix: { label: "Set to $0.01", value: 0.01 },
-          });
+          warnings.push({ productId, productTitle: product.title, field: "Price", message: "Price is $0 or negative", severity: "error", fix: { label: "Set to $0.01", value: 0.01 } });
         }
-
-        const compareAt = changes.compareAtPrice !== undefined
-          ? Number(changes.compareAtPrice)
-          : product.compareAtPrice;
-
+        const compareAt = changes.compareAtPrice !== undefined ? Number(changes.compareAtPrice) : product.compareAtPrice;
         if (compareAt && price >= compareAt) {
-          warnings.push({
-            productId,
-            productTitle: product.title,
-            field: "Price",
-            message: "Price is ≥ compare-at price (discount will not show)",
-            severity: "warning",
-          });
+          warnings.push({ productId, productTitle: product.title, field: "Price", message: "Price is ≥ compare-at price (discount will not show)", severity: "warning" });
         }
       }
     }
@@ -109,35 +86,16 @@ function getValidationWarnings(products: Product[], changedCells: Map<string, Re
     if (changes.inventory !== undefined) {
       const inventory = Number(changes.inventory);
       if (Number.isNaN(inventory) || inventory < 0) {
-        warnings.push({
-          productId,
-          productTitle: product.title,
-          field: "Inventory",
-          message: "Inventory must be a non-negative number",
-          severity: "error",
-          fix: { label: "Set to 0", value: 0 },
-        });
+        warnings.push({ productId, productTitle: product.title, field: "Inventory", message: "Inventory must be a non-negative number", severity: "error", fix: { label: "Set to 0", value: 0 } });
       }
     }
 
     if (changes.imageUrl !== undefined && String(changes.imageUrl).trim() === "" && product.imageUrl) {
-      warnings.push({
-        productId,
-        productTitle: product.title,
-        field: "Image",
-        message: "Image will be cleared",
-        severity: "warning",
-      });
+      warnings.push({ productId, productTitle: product.title, field: "Image", message: "Image will be cleared", severity: "warning" });
     }
 
     if (changes.title !== undefined && String(changes.title).trim() === "") {
-      warnings.push({
-        productId,
-        productTitle: product.title,
-        field: "Title",
-        message: "Product title is empty",
-        severity: "error",
-      });
+      warnings.push({ productId, productTitle: product.title, field: "Title", message: "Product title is empty", severity: "error" });
     }
 
     if (changes.sku !== undefined) {
@@ -147,13 +105,7 @@ function getValidationWarnings(products: Product[], changedCells: Map<string, Re
           ([id, sku]) => id !== productId && sku === nextSku
         );
         if (duplicate) {
-          warnings.push({
-            productId,
-            productTitle: product.title,
-            field: "SKU",
-            message: `SKU conflicts with another product (${nextSku})`,
-            severity: "error",
-          });
+          warnings.push({ productId, productTitle: product.title, field: "SKU", message: `SKU conflicts with another product (${nextSku})`, severity: "error" });
         }
       }
     }
@@ -162,13 +114,7 @@ function getValidationWarnings(products: Product[], changedCells: Map<string, Re
   return warnings;
 }
 
-function PreviewCard({
-  product,
-  changes,
-}: {
-  product: Product;
-  changes: Record<string, unknown>;
-}) {
+function PreviewCard({ product, changes }: { product: Product; changes: Record<string, unknown> }) {
   const beforePrice = product.price;
   const afterPrice = Number(getNextValue(product, changes, "price") || 0);
   const beforeTitle = String(product.title || "");
@@ -196,20 +142,10 @@ function PreviewCard({
       </div>
       <div className="border border-border rounded-md p-2 bg-muted/20">
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">After</p>
-        <img
-          src={afterImage || ""}
-          alt={afterTitle}
-          className={cn("w-full h-24 object-cover rounded mb-2 bg-muted", changed.image && "ring-1 ring-success")}
-        />
-        <p className={cn("text-xs font-semibold truncate", changed.title ? "text-success bg-success/10 px-1 rounded" : "text-foreground")}>
-          {afterTitle || "Untitled"}
-        </p>
-        <p className={cn("text-xs", changed.price ? "text-success bg-success/10 inline-block px-1 rounded" : "text-foreground")}>
-          ${Number.isFinite(afterPrice) ? afterPrice.toFixed(2) : "0.00"}
-        </p>
-        <p className={cn("text-[11px] line-clamp-2", changed.description ? "text-success bg-success/10 px-1 rounded" : "text-muted-foreground")}>
-          {afterDescription || "No description"}
-        </p>
+        <img src={afterImage || ""} alt={afterTitle} className={cn("w-full h-24 object-cover rounded mb-2 bg-muted", changed.image && "ring-1 ring-success")} />
+        <p className={cn("text-xs font-semibold truncate", changed.title ? "text-success bg-success/10 px-1 rounded" : "text-foreground")}>{afterTitle || "Untitled"}</p>
+        <p className={cn("text-xs", changed.price ? "text-success bg-success/10 inline-block px-1 rounded" : "text-foreground")}>${Number.isFinite(afterPrice) ? afterPrice.toFixed(2) : "0.00"}</p>
+        <p className={cn("text-[11px] line-clamp-2", changed.description ? "text-success bg-success/10 px-1 rounded" : "text-muted-foreground")}>{afterDescription || "No description"}</p>
       </div>
     </div>
   );
@@ -218,6 +154,7 @@ function PreviewCard({
 export function ReviewPanel({ open, onClose, products, changedCells, onApply, onDiscard, onAutoFixChange }: ReviewPanelProps) {
   const [simulated, setSimulated] = useState(false);
   const [simulating, setSimulating] = useState(false);
+  const [selectedDiffProductId, setSelectedDiffProductId] = useState<string | null>(null);
 
   const warnings = useMemo(() => getValidationWarnings(products, changedCells), [products, changedCells]);
   if (!open) return null;
@@ -225,7 +162,12 @@ export function ReviewPanel({ open, onClose, products, changedCells, onApply, on
   const errors = warnings.filter((w) => w.severity === "error");
   const changedCount = changedCells.size;
   const totalFields = Array.from(changedCells.values()).reduce((acc, c) => acc + Object.keys(c).length, 0);
-  const sampleProductIds = Array.from(changedCells.keys()).slice(0, 5);
+  const changedProductIds = Array.from(changedCells.keys());
+
+  // Show preview for the selected diff product, or first one by default
+  const previewProductId = selectedDiffProductId && changedCells.has(selectedDiffProductId)
+    ? selectedDiffProductId
+    : changedProductIds[0] || null;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -310,30 +252,45 @@ export function ReviewPanel({ open, onClose, products, changedCells, onApply, on
         )}
 
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4">
-          {sampleProductIds.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Storefront preview (sample)</h3>
-              <div className="space-y-2">
-                {sampleProductIds.map((productId) => {
-                  const product = products.find((p) => p.id === productId);
-                  const changes = changedCells.get(productId) || {};
-                  if (!product) return null;
-                  return <PreviewCard key={productId} product={product} changes={changes} />;
-                })}
+          {/* Storefront preview - shows only selected product */}
+          {previewProductId && (() => {
+            const product = products.find((p) => p.id === previewProductId);
+            const changes = changedCells.get(previewProductId) || {};
+            if (!product) return null;
+            return (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Storefront preview
+                  {changedCount > 1 && (
+                    <span className="text-muted-foreground font-normal ml-1">— click a product below to preview</span>
+                  )}
+                </h3>
+                <PreviewCard product={product} changes={changes} />
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Change diff</h3>
-            <div className="space-y-3">
-              {Array.from(changedCells.entries()).map(([productId, changes]) => {
+            <div className="space-y-1">
+              {changedProductIds.map((productId) => {
                 const product = products.find((p) => p.id === productId);
+                const changes = changedCells.get(productId) || {};
                 if (!product) return null;
+                const isSelected = productId === previewProductId;
                 return (
-                  <div key={productId} className="border border-border rounded-lg p-3">
+                  <div
+                    key={productId}
+                    onClick={() => setSelectedDiffProductId(productId)}
+                    className={cn(
+                      "border rounded-lg p-3 cursor-pointer transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
+                    )}
+                  >
                     <div className="flex items-center gap-2 mb-2">
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", isSelected && "rotate-90 text-primary")} />
                       <span className="text-sm font-medium text-foreground">{product.title}</span>
                       <span className="text-[10px] text-muted-foreground font-mono">{product.sku}</span>
                     </div>
