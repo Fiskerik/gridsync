@@ -32,6 +32,7 @@ interface ScheduledJob {
 
 const ACTION_LABELS: Record<string, string> = {
   price_percent: "Adjust price by %",
+  price_fixed: "Adjust price by fixed amount",
   price_set: "Set fixed price",
   find_replace: "Find & replace text",
   set_tags: "Update tags",
@@ -87,6 +88,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
   const [name, setName] = useState("");
   const [actionType, setActionType] = useState("price_percent");
   const [percent, setPercent] = useState("10");
+  const [fixedAmount, setFixedAmount] = useState("5");
   const [fixedPrice, setFixedPrice] = useState("0");
   const [field, setField] = useState("price");
   const [findText, setFindText] = useState("");
@@ -191,6 +193,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
 
     let actionParams: Record<string, string> = {};
     if (actionType === "price_percent") actionParams = { percent, field };
+    else if (actionType === "price_fixed") actionParams = { amount: fixedAmount, field };
     else if (actionType === "price_set") actionParams = { price: fixedPrice, field };
     else if (actionType === "find_replace") actionParams = { field, find: findText, replace: replaceText };
     else if (actionType === "set_tags") actionParams = { tags, action: tagAction };
@@ -225,6 +228,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
     setName("");
     setActionType("price_percent");
     setPercent("10");
+    setFixedAmount("5");
     setFixedPrice("0");
     setField("price");
     setFindText("");
@@ -283,6 +287,9 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
     if (job.action_type === "price_percent") {
       setPercent(params.percent || "10");
       setField(params.field || "price");
+    } else if (job.action_type === "price_fixed") {
+      setFixedAmount(params.amount || "5");
+      setField(params.field || "price");
     } else if (job.action_type === "price_set") {
       setFixedPrice(params.price || "0");
       setField(params.field || "price");
@@ -313,6 +320,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
 
     let actionParams: Record<string, string> = {};
     if (actionType === "price_percent") actionParams = { percent, field };
+    else if (actionType === "price_fixed") actionParams = { amount: fixedAmount, field };
     else if (actionType === "price_set") actionParams = { price: fixedPrice, field };
     else if (actionType === "find_replace") actionParams = { field, find: findText, replace: replaceText };
     else if (actionType === "set_tags") actionParams = { tags, action: tagAction };
@@ -629,6 +637,25 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
                     ))}
                   </select>
                 </div>
+              )}
+              {actionType === "price_fixed" && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Amount ($)</label>
+                    <input type="number" value={fixedAmount} onChange={(e) => setFixedAmount(e.target.value)}
+                      placeholder="e.g. -5 to lower by $5"
+                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                    <p className="text-[10px] text-muted-foreground mt-1">Use negative to decrease, positive to increase</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Field</label>
+                    <select value={field} onChange={(e) => setField(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                      <option value="price">Price</option>
+                      <option value="compareAtPrice">Compare at Price</option>
+                    </select>
+                  </div>
+                </>
               )}
 
               {/* Picker toolbar: search, filter by label, column visibility */}

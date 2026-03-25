@@ -128,6 +128,13 @@ Deno.serve(async (req) => {
               updates[fieldName] = Math.round(current * (1 + pct) * 100) / 100;
               break;
             }
+            case "price_fixed": {
+              const amount = parseFloat(params.amount || "0");
+              const fieldName = params.field === "compareAtPrice" ? "compare_at_price" : "price";
+              const current = Number(product[fieldName]) || 0;
+              updates[fieldName] = Math.round((current + amount) * 100) / 100;
+              break;
+            }
             case "price_set": {
               const fieldName = params.field === "compareAtPrice" ? "compare_at_price" : "price";
               updates[fieldName] = parseFloat(params.price || "0");

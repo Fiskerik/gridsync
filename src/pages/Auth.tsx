@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,6 +132,11 @@ const Auth = () => {
               >
                 {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
               </button>
+            </div>
+            <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-2">
+              <Link to="/privacy" className="hover:text-foreground hover:underline">Privacy Policy</Link>
+              <span>·</span>
+              <Link to="/terms" className="hover:text-foreground hover:underline">Terms & Conditions</Link>
             </div>
           </div>
         </CardContent>
