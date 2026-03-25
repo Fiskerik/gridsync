@@ -34,6 +34,7 @@ interface EditorToolbarProps {
   showBefore: boolean;
   onShowBeforeChange: (v: boolean) => void;
   hasChanges: boolean;
+  onOpenFilters?: () => void;
 }
 
 export function EditorToolbar({
@@ -45,6 +46,7 @@ export function EditorToolbar({
   showBefore,
   onShowBeforeChange,
   hasChanges,
+  onOpenFilters,
 }: EditorToolbarProps) {
   const toggleColumn = (key: ColumnKey) => {
     if (visibleColumns.includes(key)) {
