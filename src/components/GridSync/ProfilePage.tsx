@@ -19,8 +19,7 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
+
 
   const handleSaveName = async () => {
     setSavingName(true);
