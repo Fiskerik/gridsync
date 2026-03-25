@@ -100,9 +100,16 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
 
         <div className="ml-auto flex items-center gap-2 md:gap-3 py-2.5 shrink-0">
           {user && (
-            <span className="hidden sm:block text-xs text-muted-foreground truncate max-w-[120px] md:max-w-[160px]">
-              {user.email}
-            </span>
+            <button
+              onClick={() => handleTabChange("profile")}
+              className={`hidden sm:flex items-center gap-1.5 text-xs transition-colors ${
+                activeTab === "profile" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Profile settings"
+            >
+              <UserCircle className="w-4 h-4" />
+              <span className="truncate max-w-[120px] md:max-w-[160px]">{user.user_metadata?.display_name || user.email}</span>
+            </button>
           )}
           <button
             onClick={signOut}
