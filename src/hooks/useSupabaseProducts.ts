@@ -10,6 +10,13 @@ export interface ShopifyStore {
   created_at: string;
 }
 
+export interface ShopifyPushResult {
+  productId: string;
+  shopifyId: string;
+  success: boolean;
+  error?: string;
+}
+
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<ShopifyStore[]>([]);
