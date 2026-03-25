@@ -145,7 +145,7 @@ function CategoryCell({
         </button>
       </div>
       {open && (
-        <div className="absolute z-30 top-full left-0 mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg py-1">
+        <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg py-1" style={{ position: 'fixed' as const }}>
           {unassigned.length > 0 && (
             <div className="max-h-32 overflow-auto">
               {unassigned.map((cat) => (

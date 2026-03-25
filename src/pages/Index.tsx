@@ -461,6 +461,7 @@ const Index = () => {
             products={shopifyProducts}
             categories={categories}
             getProductsByCategory={getProductsByCategory}
+            getProductCategories={getProductCategories}
           />
         )}
         {activeTab === "import" && (
