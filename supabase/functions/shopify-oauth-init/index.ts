@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       ? shopDomain
       : `${shopDomain}.myshopify.com`;
 
-    const scopes = "read_products,write_products,read_inventory,write_inventory";
+    const scopes = "read_products,write_products";
     const projectId = Deno.env.get("SUPABASE_URL")!.match(/https:\/\/([^.]+)/)?.[1] || "";
     const redirectUri = `https://${projectId}.supabase.co/functions/v1/shopify-oauth-callback`;
 
