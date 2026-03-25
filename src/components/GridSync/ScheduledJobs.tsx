@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { CalendarIcon, Clock, Plus, Trash2, Play, Pause, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockProducts } from "@/data/mockProducts";
+import { Product } from "@/data/mockProducts";
 import { toast } from "sonner";
 
 interface ScheduledJob {
