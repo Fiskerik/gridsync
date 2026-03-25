@@ -533,6 +533,7 @@ const Index = () => {
           />
         )}
         {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
+        {activeTab === "profile" && <ProfilePage />}
       </>
     );
   }
