@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
                 productId: change.productId,
                 shopifyId: change.shopifyId,
                 success: false,
-                error: `Failed to fetch locations [${locationsRes.status}]: ${body}. Reconnect the store after updating app scopes.",
+                error: `Failed to fetch locations [${locationsRes.status}]: ${body}. Reconnect the store after updating app scopes.`,
               });
               continue;
             }
