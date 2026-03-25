@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { Product } from "@/data/mockProducts";
+import type { Json } from "@/integrations/supabase/types";
 import { TabNav, TabId } from "@/components/GridSync/TabNav";
 import { Sidebar } from "@/components/GridSync/Sidebar";
 import { EditorToolbar, DEFAULT_VISIBLE, ColumnKey } from "@/components/GridSync/EditorToolbar";
