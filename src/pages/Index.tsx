@@ -73,7 +73,7 @@ const Index = () => {
         } else if (action === "find_replace") {
           const field = params.field || "title";
           const current = String((product as unknown as Record<string, unknown>)[field] || "");
-          existing[field] = current.replaceAll(params.find || "", params.replace || "");
+          existing[field] = current.split(params.find || "").join(params.replace || "");
         } else if (action === "set_tags") {
           const newTags = (params.tags || "").split(",").map((t) => t.trim()).filter(Boolean);
           if (params.action === "replace") existing.tags = newTags;
