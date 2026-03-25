@@ -177,7 +177,7 @@ const Index = () => {
       const allFields = new Set<string>();
       cells.forEach((fields) => Object.keys(fields).forEach((f) => allFields.add(f)));
 
-      const { data: historyEntry, error: histErr } = await (await import("@/integrations/supabase/client")).supabase
+      const { data: historyEntry, error: histErr } = await supabase
         .from("edit_history")
         .insert({
           user_id: session.user.id,
