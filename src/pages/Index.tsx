@@ -12,6 +12,7 @@ import { ReviewPanel } from "@/components/GridSync/ReviewPanel";
 import { ChangeHistory } from "@/components/GridSync/ChangeHistory";
 import { ApplyProgress } from "@/components/GridSync/ApplyProgress";
 import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
+import { ProfilePage } from "@/components/GridSync/ProfilePage";
 import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
@@ -343,6 +344,7 @@ const Index = () => {
           onMobileClose={() => setMobileSidebarOpen(false)}
           categories={categories}
           getProductsByCategory={getProductsByCategory}
+          onSwitchToEditor={() => setActiveTab("editor")}
         />
 
         {/* Desktop: resizable panels */}
@@ -367,6 +369,7 @@ const Index = () => {
                   categories={categories}
                   getProductsByCategory={getProductsByCategory}
                   desktopInline
+                  onSwitchToEditor={() => setActiveTab("editor")}
                 />
               </aside>
             </ResizablePanel>
@@ -530,6 +533,7 @@ const Index = () => {
           />
         )}
         {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
+        {activeTab === "profile" && <ProfilePage />}
       </>
     );
   }

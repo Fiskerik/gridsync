@@ -27,6 +27,7 @@ interface SidebarProps {
   categories?: Category[];
   getProductsByCategory?: (categoryId: string) => string[];
   desktopInline?: boolean;
+  onSwitchToEditor?: () => void;
 }
 
 const smartSelects = [
@@ -55,6 +56,7 @@ export function Sidebar({
   categories = [],
   getProductsByCategory,
   desktopInline = false,
+  onSwitchToEditor,
 }: SidebarProps) {
   const counts: Record<string, number> = {
     all: totalProducts,
@@ -79,6 +81,7 @@ export function Sidebar({
   const handleFilterChange = (id: string) => {
     onFilterChange(id);
     onMobileClose?.();
+    onSwitchToEditor?.();
   };
 
   const SidebarButton = ({ id, label, count, dot }: { id: string; label: string; count?: number; dot?: boolean }) => (

@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X, UserCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect, useRef } from "react";
 
-type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review";
+type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review" | "profile";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "editor", label: "Bulk Editor" },
@@ -100,9 +100,16 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
 
         <div className="ml-auto flex items-center gap-2 md:gap-3 py-2.5 shrink-0">
           {user && (
-            <span className="hidden sm:block text-xs text-muted-foreground truncate max-w-[120px] md:max-w-[160px]">
-              {user.email}
-            </span>
+            <button
+              onClick={() => handleTabChange("profile")}
+              className={`hidden sm:flex items-center gap-1.5 text-xs transition-colors ${
+                activeTab === "profile" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Profile settings"
+            >
+              <UserCircle className="w-4 h-4" />
+              <span className="truncate max-w-[120px] md:max-w-[160px]">{user.user_metadata?.display_name || user.email}</span>
+            </button>
           )}
           <button
             onClick={signOut}
@@ -145,6 +152,17 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
                 {pendingChanges}
               </Badge>
             )}
+          </button>
+          <button
+            onClick={() => handleTabChange("profile")}
+            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
+              activeTab === "profile"
+                ? "bg-primary/10 text-foreground font-medium"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <UserCircle className="w-3.5 h-3.5" />
+            Profile
           </button>
           <div className="border-t border-border mt-1 pt-1">
             <button
