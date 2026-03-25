@@ -107,21 +107,11 @@ function CategoryCell({
 }) {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
 
   const unassigned = allCategories.filter((c) => !productCategories.some((pc) => pc.id === c.id));
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <div className="flex flex-wrap gap-1 items-center min-h-[24px]">
         {productCategories.map((cat) => (
           <span
@@ -138,55 +128,56 @@ function CategoryCell({
             </button>
           </span>
         ))}
-        <button
-          onClick={() => setOpen(!open)}
-          className="w-5 h-5 rounded-full border border-dashed border-muted-foreground/40 flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <Plus className="w-3 h-3 text-muted-foreground" />
-        </button>
-      </div>
-      {open && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-popover border border-border rounded-lg shadow-lg py-1" style={{ position: 'fixed' as const }}>
-          {unassigned.length > 0 && (
-            <div className="max-h-32 overflow-auto">
-              {unassigned.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => { onAssign?.(productId, cat.id); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left"
-                >
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="border-t border-border px-2 py-1.5">
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!newName.trim() || !onCreate) return;
-                const cat = await onCreate(newName.trim());
-                if (cat) {
-                  onAssign?.(productId, cat.id);
-                  setNewName("");
-                }
-              }}
-              className="flex gap-1"
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="w-5 h-5 rounded-full border border-dashed border-muted-foreground/40 flex items-center justify-center hover:bg-muted transition-colors"
             >
-              <input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="New category..."
-                className="flex-1 px-2 py-1 text-xs bg-card border border-input rounded text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-              <button type="submit" className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90">
-                Add
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+              <Plus className="w-3 h-3 text-muted-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" align="start" side="bottom" sideOffset={4}>
+            {unassigned.length > 0 && (
+              <div className="max-h-32 overflow-auto">
+                {unassigned.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => { onAssign?.(productId, cat.id); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted transition-colors text-left rounded-sm"
+                  >
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="border-t border-border px-2 py-1.5">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!newName.trim() || !onCreate) return;
+                  const cat = await onCreate(newName.trim());
+                  if (cat) {
+                    onAssign?.(productId, cat.id);
+                    setNewName("");
+                  }
+                }}
+                className="flex gap-1"
+              >
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="New category..."
+                  className="flex-1 px-2 py-1 text-xs bg-card border border-input rounded text-foreground placeholder:text-muted-foreground focus:outline-none"
+                />
+                <button type="submit" className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90">
+                  Add
+                </button>
+              </form>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   );
 }
