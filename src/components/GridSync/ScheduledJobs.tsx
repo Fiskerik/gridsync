@@ -46,7 +46,11 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
-export function ScheduledJobs() {
+interface ScheduledJobsProps {
+  products: Product[];
+}
+
+export function ScheduledJobs({ products }: ScheduledJobsProps) {
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
