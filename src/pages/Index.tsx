@@ -171,7 +171,7 @@ const Index = () => {
 
   const saveEditHistory = useCallback(async (cells: Map<string, Record<string, unknown>>) => {
     try {
-      const { data: { session } } = await (await import("@/integrations/supabase/client")).supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
       const allFields = new Set<string>();
