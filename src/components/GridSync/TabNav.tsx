@@ -1,16 +1,18 @@
-import { Badge } from "@/components/ui/badge";
-import { LogOut, Menu, X, UserCircle } from "lucide-react";
+import { Badge as PolarisBadge, Tabs, Button as PolarisButton, Text, InlineStack, Icon } from "@shopify/polaris";
+import { LogOutIcon, PersonIcon } from "@shopify/polaris-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect, useRef } from "react";
+import { Menu, X } from "lucide-react";
 
 type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review" | "profile";
 
-const tabs: { id: TabId; label: string }[] = [
+const tabDefs: { id: TabId; label: string }[] = [
   { id: "editor", label: "Bulk Editor" },
   { id: "history", label: "Change History" },
   { id: "scheduled", label: "Scheduled Jobs" },
   { id: "import", label: "Import / Export" },
   { id: "export-csv", label: "Export CSV" },
+  { id: "review", label: "Review & Apply" },
 ];
 
 interface TabNavProps {
@@ -29,7 +31,6 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
     setMobileMenuOpen(false);
   };
 
-  // Close menu on outside click
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -41,14 +42,13 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
     return () => document.removeEventListener("mousedown", handler);
   }, [mobileMenuOpen]);
 
-  const activeLabel = [...tabs, { id: "review" as TabId, label: "Review & Apply" }].find(
-    (t) => t.id === activeTab
-  )?.label;
+  const activeLabel = tabDefs.find((t) => t.id === activeTab)?.label || "Profile";
+  const selectedTabIndex = tabDefs.findIndex((t) => t.id === activeTab);
 
   return (
     <div ref={menuRef} className="relative">
       <div className="flex items-center gap-1 border-b border-border px-3 md:px-4 bg-card">
-        {/* Mobile: hamburger + active tab label */}
+        {/* Mobile hamburger */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="md:hidden p-1.5 -ml-1 text-muted-foreground hover:text-foreground"
@@ -66,36 +66,28 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
           {activeLabel}
         </span>
 
-        {/* Desktop tabs */}
-        <div className="hidden md:flex items-center gap-1">
-          {tabs.map((tab) => (
+        {/* Desktop: Polaris-style Tabs */}
+        <div className="hidden md:flex items-center gap-0">
+          {tabDefs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-primary text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`}
             >
-              {tab.label}
+              <InlineStack gap="100" blockAlign="center">
+                <span>{tab.label}</span>
+                {tab.id === "review" && pendingChanges > 0 && (
+                  <span className="bg-changed text-xs text-changed-foreground px-1.5 py-0 rounded-full font-semibold">
+                    {pendingChanges}
+                  </span>
+                )}
+              </InlineStack>
             </button>
           ))}
-          <button
-            onClick={() => handleTabChange("review")}
-            className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === "review"
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-            }`}
-          >
-            Review & Apply
-            {pendingChanges > 0 && (
-              <Badge className="bg-changed text-changed-foreground text-[10px] px-1.5 py-0 font-semibold">
-                {pendingChanges}
-              </Badge>
-            )}
-          </button>
         </div>
 
         <div className="ml-auto flex items-center gap-2 md:gap-3 py-2.5 shrink-0">
@@ -107,7 +99,7 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
               }`}
               title="Profile settings"
             >
-              <UserCircle className="w-4 h-4" />
+              <Icon source={PersonIcon} />
               <span className="truncate max-w-[120px] md:max-w-[160px]">{user.user_metadata?.display_name || user.email}</span>
             </button>
           )}
@@ -116,7 +108,7 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
             className="hidden md:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             title="Sign out"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <Icon source={LogOutIcon} />
             <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
@@ -125,34 +117,24 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
       {/* Mobile dropdown menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-border bg-card px-3 py-2 space-y-1 absolute z-50 left-0 right-0 shadow-lg">
-          {tabs.map((tab) => (
+          {tabDefs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+              className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
                 activeTab === tab.id
                   ? "bg-primary/10 text-foreground font-medium"
                   : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {tab.label}
+              {tab.id === "review" && pendingChanges > 0 && (
+                <span className="bg-changed text-changed-foreground text-[10px] px-1.5 py-0 rounded-full font-semibold">
+                  {pendingChanges}
+                </span>
+              )}
             </button>
           ))}
-          <button
-            onClick={() => handleTabChange("review")}
-            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
-              activeTab === "review"
-                ? "bg-primary/10 text-foreground font-medium"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            Review & Apply
-            {pendingChanges > 0 && (
-              <Badge className="bg-changed text-changed-foreground text-[10px] px-1.5 py-0 font-semibold">
-                {pendingChanges}
-              </Badge>
-            )}
-          </button>
           <button
             onClick={() => handleTabChange("profile")}
             className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
@@ -161,7 +143,7 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
                 : "text-muted-foreground hover:bg-muted"
             }`}
           >
-            <UserCircle className="w-3.5 h-3.5" />
+            <Icon source={PersonIcon} />
             Profile
           </button>
           <div className="border-t border-border mt-1 pt-1">
@@ -169,7 +151,7 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
               onClick={() => { setMobileMenuOpen(false); signOut(); }}
               className="w-full text-left px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-muted flex items-center gap-2"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <Icon source={LogOutIcon} />
               Sign out
             </button>
           </div>
