@@ -105,6 +105,7 @@ export type Database = {
           shopify_id: string | null
           sku: string
           status: string
+          store_id: string | null
           tags: string[]
           title: string
           updated_at: string
@@ -127,6 +128,7 @@ export type Database = {
           shopify_id?: string | null
           sku?: string
           status?: string
+          store_id?: string | null
           tags?: string[]
           title?: string
           updated_at?: string
@@ -149,6 +151,7 @@ export type Database = {
           shopify_id?: string | null
           sku?: string
           status?: string
+          store_id?: string | null
           tags?: string[]
           title?: string
           updated_at?: string
@@ -156,7 +159,15 @@ export type Database = {
           variants?: number
           vendor?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shopify_stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -222,6 +233,39 @@ export type Database = {
           product_ids?: string[]
           scheduled_at?: string
           status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      shopify_stores: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          scopes: string
+          shop_domain: string
+          store_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          scopes?: string
+          shop_domain: string
+          store_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          scopes?: string
+          shop_domain?: string
+          store_name?: string
           updated_at?: string
           user_id?: string
         }
