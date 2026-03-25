@@ -188,10 +188,16 @@ export function useSupabaseProducts() {
 
   const pushChangesToShopify = useCallback(
     async (changedCells: Map<string, Record<string, unknown>>) => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Not authenticated");
-        return { success: false, summary: { total: 0, succeeded: 0, failed: 0 } };
+        return {
+          success: false,
+          summary: { total: 0, succeeded: 0, failed: 0 },
+          results: [] as ShopifyPushResult[],
+        };
       }
 
       const changes = Array.from(changedCells.entries())
@@ -230,7 +236,11 @@ export function useSupabaseProducts() {
       }
 
       await fetchProducts();
-      return { success: true, summary: data.summary };
+      return {
+        success: true,
+        summary: data.summary,
+        results: (data.results || []) as ShopifyPushResult[],
+      };
     },
     [products, fetchProducts]
   );
