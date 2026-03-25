@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
       return new Response("Missing required OAuth parameters", { status: 400 });
     }
 
-    // Decode state to get user info
     let stateData: { userId: string; shop: string; ts: number };
     try {
       stateData = JSON.parse(atob(state));
@@ -19,12 +18,10 @@ Deno.serve(async (req) => {
       return new Response("Invalid state parameter", { status: 400 });
     }
 
-    // Verify state shop matches callback shop
     if (stateData.shop !== shop) {
       return new Response("Shop mismatch in state", { status: 400 });
     }
 
-    // Check timestamp (expire after 10 minutes)
     if (Date.now() - stateData.ts > 600000) {
       return new Response("OAuth session expired", { status: 400 });
     }
@@ -36,7 +33,6 @@ Deno.serve(async (req) => {
       return new Response("Shopify OAuth credentials not configured", { status: 500 });
     }
 
-    // Exchange code for access token
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -57,7 +53,6 @@ Deno.serve(async (req) => {
     const accessToken = tokenData.access_token;
     const scopes = tokenData.scope || "";
 
-    // Get shop info for the store name
     const shopInfoRes = await fetch(`https://${shop}/admin/api/2025-07/shop.json`, {
       headers: {
         "X-Shopify-Access-Token": accessToken,
@@ -71,7 +66,6 @@ Deno.serve(async (req) => {
       storeName = shopInfo.shop?.name || storeName;
     }
 
-    // Store in database using service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
@@ -95,22 +89,97 @@ Deno.serve(async (req) => {
       return new Response(`Failed to save store credentials: ${upsertError.message}`, { status: 500 });
     }
 
-    // Redirect back to the app with success
-    const appUrl = Deno.env.get("APP_URL") || url.origin;
-    // Use a simple HTML page that posts a message and redirects
+    const escapedStoreName = storeName.replace(/'/g, "\\'").replace(/</g, "&lt;");
+    const escapedShop = shop.replace(/'/g, "\\'").replace(/</g, "&lt;");
+
     const html = `<!DOCTYPE html>
-<html>
-<head><title>Connected!</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Store Connected — GridSync</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: hsl(40, 33%, 97%);
+      color: hsl(30, 10%, 15%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: hsl(40, 40%, 99%);
+      border: 1px solid hsl(35, 20%, 87%);
+      border-radius: 12px;
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 24px hsl(30, 10%, 15%, 0.06);
+    }
+    .icon-circle {
+      width: 64px; height: 64px;
+      background: hsl(152, 50%, 36%, 0.12);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .icon-circle svg { width: 32px; height: 32px; color: hsl(152, 50%, 36%); }
+    h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .shop-name {
+      display: inline-block;
+      background: hsl(35, 30%, 93%);
+      color: hsl(30, 10%, 25%);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      margin: 12px 0 20px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: hsl(30, 8%, 50%);
+      line-height: 1.5;
+    }
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid hsl(35, 20%, 87%);
+      border-top-color: hsl(152, 44%, 28%);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    .redirect-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: hsl(30, 8%, 50%);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
 <body>
-  <h2>Store connected successfully!</h2>
-  <p>Redirecting back to the app...</p>
+  <div class="card">
+    <div class="icon-circle">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <h2>Store Connected!</h2>
+    <div class="shop-name">${escapedStoreName}</div>
+    <p class="subtitle">Your Shopify store has been successfully linked to GridSync. You can now import and manage your products.</p>
+    <p class="redirect-note"><span class="spinner"></span>Redirecting back to the app…</p>
+  </div>
   <script>
-    // Try to close popup or redirect
     if (window.opener) {
-      window.opener.postMessage({ type: 'shopify-oauth-success', shop: '${shop}', storeName: '${storeName.replace(/'/g, "\\'")}' }, '*');
-      window.close();
+      window.opener.postMessage({ type: 'shopify-oauth-success', shop: '${escapedShop}', storeName: '${escapedStoreName}' }, '*');
+      setTimeout(() => window.close(), 2000);
     } else {
-      window.location.href = '/';
+      setTimeout(() => { window.location.href = '/'; }, 2500);
     }
   </script>
 </body>
