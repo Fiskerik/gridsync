@@ -82,6 +82,10 @@ export function Sidebar({
   const handleFilterChange = (id: string) => {
     onFilterChange(id);
     onMobileClose?.();
+    // Auto-switch to Bulk Editor when clicking filters that filter products
+    if (id !== "all" || id.startsWith("smart:") || id.startsWith("collection:") || id.startsWith("category:") || id === "changed" || id === "active" || id === "draft") {
+      onSwitchToEditor?.();
+    }
   };
 
   const SidebarButton = ({ id, label, count, dot }: { id: string; label: string; count?: number; dot?: boolean }) => (
