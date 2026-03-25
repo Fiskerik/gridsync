@@ -213,6 +213,18 @@ const Index = () => {
     [selectedIds, shopifyProducts, assignCategoryToMany, unassignCategoryFromMany]
   );
 
+  const handleSyncStores = useCallback(async (storeIds: string[]) => {
+    for (const storeId of storeIds) {
+      try {
+        await importFromShopify(storeId);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Sync failed";
+        toast.error(`Failed to sync store`, { description: msg });
+      }
+    }
+    toast.success(`Synced ${storeIds.length} store${storeIds.length !== 1 ? "s" : ""}`);
+  }, [importFromShopify]);
+
   const handleApply = useCallback(async () => {
     setReviewOpen(false);
     setApplyOpen(true);
@@ -419,6 +431,8 @@ const Index = () => {
               onShowBeforeChange={setShowBefore}
               hasChanges={changedCells.size > 0}
               onOpenFilters={() => setMobileSidebarOpen(true)}
+              stores={stores}
+              onSyncStores={handleSyncStores}
             />
             <InfoBanner />
             {loading ? (
