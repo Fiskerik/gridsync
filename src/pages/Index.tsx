@@ -167,7 +167,52 @@ const Index = () => {
     setApplyOpen(true);
   }, []);
 
+  const saveEditHistory = useCallback(async (cells: Map<string, Record<string, unknown>>) => {
+    try {
+      const { data: { session } } = await (await import("@/integrations/supabase/client")).supabase.auth.getSession();
+      if (!session) return;
+
+      const allFields = new Set<string>();
+      cells.forEach((fields) => Object.keys(fields).forEach((f) => allFields.add(f)));
+
+      const { data: historyEntry, error: histErr } = await (await import("@/integrations/supabase/client")).supabase
+        .from("edit_history")
+        .insert({
+          user_id: session.user.id,
+          description: `Edited ${cells.size} product${cells.size > 1 ? "s" : ""}`,
+          products_affected: cells.size,
+          fields_changed: Array.from(allFields),
+        })
+        .select("id")
+        .single();
+
+      if (histErr || !historyEntry) throw histErr;
+
+      const changeRows = Array.from(cells.entries()).flatMap(([productId, fields]) => {
+        const product = shopifyProducts.find((p) => p.id === productId);
+        return Object.entries(fields).map(([field, newValue]) => ({
+          edit_history_id: historyEntry.id,
+          product_id: productId,
+          field,
+          old_value: product ? (product as unknown as Record<string, unknown>)[field] ?? null : null,
+          new_value: newValue ?? null,
+        }));
+      });
+
+      if (changeRows.length > 0) {
+        await (await import("@/integrations/supabase/client")).supabase
+          .from("edit_history_changes")
+          .insert(changeRows);
+      }
+    } catch (err) {
+      console.error("Failed to save edit history:", err);
+    }
+  }, [shopifyProducts]);
+
   const handleApplyComplete = useCallback(async () => {
+    // Save edit history
+    await saveEditHistory(changedCells);
+
     // Push changes to Shopify
     try {
       const result = await pushChangesToShopify(changedCells);
@@ -183,7 +228,7 @@ const Index = () => {
     setApplyOpen(false);
     setChangedCells(new Map());
     setSelectedIds(new Set());
-  }, [changedCells, pushChangesToShopify]);
+  }, [changedCells, pushChangesToShopify, saveEditHistory]);
 
   const activeCount = shopifyProducts.filter((p) => p.status === "active").length;
   const draftCount = shopifyProducts.filter((p) => p.status === "draft").length;
