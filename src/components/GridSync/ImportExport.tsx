@@ -155,12 +155,32 @@ export function ImportExport({
     setSyncResult("");
     try {
       const result = await pushChangesToShopify(changedCells);
-      const { succeeded, failed } = result.summary;
-      setSyncResult(`${succeeded} products updated, ${failed} failed`);
-      setSyncStatus("done");
-      toast.success(`Pushed changes to Shopify`, {
-        description: `${succeeded} updated, ${failed} failed`,
-      });
+      const { succeeded, failed, total } = result.summary;
+      const firstError = result.results.find((r) => !r.success)?.error;
+
+      if (succeeded === 0 && failed > 0) {
+        setSyncStatus("error");
+        setSyncResult(firstError || `${failed}/${total} products failed to update`);
+        toast.error("Push failed", {
+          description: firstError || `All ${failed} products failed to update`,
+        });
+        return;
+      }
+
+      if (failed > 0) {
+        setSyncStatus("done");
+        setSyncResult(`${succeeded} products updated, ${failed} failed${firstError ? ` · ${firstError}` : ""}`);
+        toast.warning("Push partially completed", {
+          description: `${succeeded} updated, ${failed} failed`,
+        });
+      } else {
+        setSyncStatus("done");
+        setSyncResult(`${succeeded} products updated`);
+        toast.success("Pushed changes to Shopify", {
+          description: `${succeeded} products updated successfully`,
+        });
+      }
+
       onPushComplete?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Push failed";
