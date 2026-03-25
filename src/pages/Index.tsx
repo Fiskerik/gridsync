@@ -253,22 +253,47 @@ const Index = () => {
   }, [shopifyProducts]);
 
   const handleApplyComplete = useCallback(async () => {
-    await saveEditHistory(changedCells);
-
     try {
       const result = await pushChangesToShopify(changedCells);
+      const failedIds = new Set(result.results.filter((r) => !r.success).map((r) => r.productId));
+
+      const succeededChanges = new Map<string, Record<string, unknown>>();
+      changedCells.forEach((fields, productId) => {
+        if (!failedIds.has(productId)) succeededChanges.set(productId, fields);
+      });
+
+      if (succeededChanges.size > 0) {
+        await saveEditHistory(succeededChanges);
+      }
+
       if (result.summary.failed > 0) {
-        toast.warning(`${result.summary.succeeded} updated, ${result.summary.failed} failed`);
+        const firstError = result.results.find((r) => !r.success)?.error;
+        toast.warning(`${result.summary.succeeded} updated, ${result.summary.failed} failed`, {
+          description: firstError || "Some products could not be synced",
+        });
       } else {
         toast.success(`${result.summary.succeeded} products updated on Shopify`);
       }
+
+      if (failedIds.size > 0) {
+        setChangedCells((prev) => {
+          const next = new Map<string, Record<string, unknown>>();
+          prev.forEach((fields, productId) => {
+            if (failedIds.has(productId)) next.set(productId, fields);
+          });
+          return next;
+        });
+      } else {
+        setChangedCells(new Map());
+      }
+
+      setSelectedIds(new Set());
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Push failed";
       toast.error("Failed to push to Shopify", { description: msg });
     }
+
     setApplyOpen(false);
-    setChangedCells(new Map());
-    setSelectedIds(new Set());
   }, [changedCells, pushChangesToShopify, saveEditHistory]);
 
   const activeCount = shopifyProducts.filter((p) => p.status === "active").length;
