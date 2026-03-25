@@ -1,11 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Plus, Trash2, Play, Pause, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CalendarIcon, Clock, Plus, Trash2, Pause, CheckCircle2, AlertCircle, Loader2, Columns3, ChevronDown, ArrowUpDown, Search, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Product } from "@/data/mockProducts";
 import { Category } from "@/hooks/useCategories";
@@ -47,13 +54,31 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
+type ProductPickerColumn = "image" | "title" | "sku" | "price" | "inventory" | "status" | "vendor" | "category" | "tags" | "productType";
+const ALL_PICKER_COLUMNS: { key: ProductPickerColumn; label: string }[] = [
+  { key: "image", label: "Image" },
+  { key: "title", label: "Title" },
+  { key: "sku", label: "SKU" },
+  { key: "price", label: "Price" },
+  { key: "inventory", label: "Inventory" },
+  { key: "status", label: "Status" },
+  { key: "vendor", label: "Vendor" },
+  { key: "category", label: "Category" },
+  { key: "tags", label: "Tags" },
+  { key: "productType", label: "Type" },
+];
+const DEFAULT_PICKER_COLS: ProductPickerColumn[] = ["image", "title", "sku", "price", "status"];
+
+type SortDir = "asc" | "desc" | null;
+
 interface ScheduledJobsProps {
   products: Product[];
   categories?: Category[];
   getProductsByCategory?: (categoryId: string) => string[];
+  getProductCategories?: (productId: string) => Category[];
 }
 
-export function ScheduledJobs({ products, categories = [], getProductsByCategory }: ScheduledJobsProps) {
+export function ScheduledJobs({ products, categories = [], getProductsByCategory, getProductCategories }: ScheduledJobsProps) {
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -74,6 +99,13 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
   const [selectionMode, setSelectionMode] = useState<"manual" | "category">("manual");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
+  // Product picker state
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerCols, setPickerCols] = useState<ProductPickerColumn[]>(DEFAULT_PICKER_COLS);
+  const [sortCol, setSortCol] = useState<ProductPickerColumn | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>(null);
+  const [filterCategoryId, setFilterCategoryId] = useState("");
+
   const fetchJobs = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -93,6 +125,54 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
       setSelectedProducts(new Set(productIds));
     }
   }, [selectionMode, selectedCategoryId, getProductsByCategory]);
+
+  // Filtered & sorted products for the picker
+  const filteredProducts = useMemo(() => {
+    let list = [...products];
+
+    // Search filter
+    if (pickerSearch.trim()) {
+      const q = pickerSearch.toLowerCase();
+      list = list.filter((p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.vendor.toLowerCase().includes(q) ||
+        p.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+
+    // Category filter
+    if (filterCategoryId && getProductsByCategory) {
+      const catProductIds = new Set(getProductsByCategory(filterCategoryId));
+      list = list.filter((p) => catProductIds.has(p.id));
+    }
+
+    // Sort
+    if (sortCol && sortDir) {
+      list.sort((a, b) => {
+        let aVal: string | number = "";
+        let bVal: string | number = "";
+        switch (sortCol) {
+          case "title": aVal = a.title; bVal = b.title; break;
+          case "sku": aVal = a.sku; bVal = b.sku; break;
+          case "price": aVal = a.price; bVal = b.price; break;
+          case "inventory": aVal = a.inventory; bVal = b.inventory; break;
+          case "status": aVal = a.status; bVal = b.status; break;
+          case "vendor": aVal = a.vendor; bVal = b.vendor; break;
+          case "productType": aVal = a.productType; bVal = b.productType; break;
+          default: return 0;
+        }
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+        }
+        return sortDir === "asc"
+          ? String(aVal).localeCompare(String(bVal))
+          : String(bVal).localeCompare(String(aVal));
+      });
+    }
+
+    return list;
+  }, [products, pickerSearch, filterCategoryId, getProductsByCategory, sortCol, sortDir]);
 
   const handleCreate = async () => {
     if (!date || selectedProducts.size === 0 || !name.trim()) {
@@ -156,6 +236,8 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
     setTime("09:00");
     setSelectionMode("manual");
     setSelectedCategoryId("");
+    setPickerSearch("");
+    setFilterCategoryId("");
   };
 
   const handleCancel = async (jobId: string) => {
@@ -188,11 +270,98 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
     });
   };
 
-  const toggleAllProducts = () => {
-    if (selectedProducts.size === products.length) {
-      setSelectedProducts(new Set());
+  const toggleAllFiltered = () => {
+    const allFilteredIds = filteredProducts.map((p) => p.id);
+    const allSelected = allFilteredIds.every((id) => selectedProducts.has(id));
+    if (allSelected) {
+      setSelectedProducts((prev) => {
+        const next = new Set(prev);
+        allFilteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
     } else {
-      setSelectedProducts(new Set(products.map((p) => p.id)));
+      setSelectedProducts((prev) => {
+        const next = new Set(prev);
+        allFilteredIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const handleSort = (col: ProductPickerColumn) => {
+    if (sortCol === col) {
+      if (sortDir === "asc") setSortDir("desc");
+      else if (sortDir === "desc") { setSortCol(null); setSortDir(null); }
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  };
+
+  const togglePickerCol = (key: ProductPickerColumn) => {
+    if (pickerCols.includes(key)) {
+      if (pickerCols.length > 1) setPickerCols(pickerCols.filter((c) => c !== key));
+    } else {
+      setPickerCols([...pickerCols, key]);
+    }
+  };
+
+  const renderPickerCell = (p: Product, col: ProductPickerColumn) => {
+    switch (col) {
+      case "image":
+        return p.imageUrl ? (
+          <img src={p.imageUrl} alt={p.title} className="w-8 h-8 rounded object-cover border border-border" />
+        ) : (
+          <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground text-[9px]">—</div>
+        );
+      case "title":
+        return <span className="text-foreground font-medium truncate block">{p.title}</span>;
+      case "sku":
+        return <span className="text-muted-foreground font-mono text-xs">{p.sku || "—"}</span>;
+      case "price":
+        return <span className="text-foreground text-xs">${p.price.toFixed(2)}</span>;
+      case "inventory":
+        return (
+          <span className={cn("text-xs font-medium", p.inventory === 0 ? "text-destructive" : p.inventory < 20 ? "text-accent" : "text-success")}>
+            {p.inventory}
+          </span>
+        );
+      case "status":
+        return (
+          <span className={cn("text-xs font-medium capitalize", p.status === "active" ? "text-status-active" : p.status === "draft" ? "text-status-draft" : "text-muted-foreground")}>
+            {p.status}
+          </span>
+        );
+      case "vendor":
+        return <span className="text-muted-foreground text-xs truncate block">{p.vendor || "—"}</span>;
+      case "category": {
+        const cats = getProductCategories?.(p.id) || [];
+        if (cats.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <div className="flex flex-wrap gap-0.5">
+            {cats.map((c) => (
+              <span key={c.id} className="text-[9px] px-1.5 py-0.5 rounded-full text-white font-medium" style={{ backgroundColor: c.color }}>
+                {c.name}
+              </span>
+            ))}
+          </div>
+        );
+      }
+      case "tags": {
+        if (!p.tags.length) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <div className="flex flex-wrap gap-0.5">
+            {p.tags.slice(0, 2).map((t) => (
+              <Badge key={t} variant="outline" className="text-[9px] px-1 py-0 font-normal">{t}</Badge>
+            ))}
+            {p.tags.length > 2 && <span className="text-[9px] text-muted-foreground">+{p.tags.length - 2}</span>}
+          </div>
+        );
+      }
+      case "productType":
+        return <span className="text-muted-foreground text-xs">{p.productType || "—"}</span>;
+      default:
+        return null;
     }
   };
 
@@ -362,8 +531,8 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
                     </div>
                   )}
                   {selectionMode === "manual" && (
-                    <button onClick={toggleAllProducts} className="text-xs text-primary hover:underline">
-                      {selectedProducts.size === products.length ? "Deselect all" : "Select all"}
+                    <button onClick={toggleAllFiltered} className="text-xs text-primary hover:underline">
+                      {filteredProducts.every((p) => selectedProducts.has(p.id)) && filteredProducts.length > 0 ? "Deselect all" : "Select all"}
                     </button>
                   )}
                 </div>
@@ -384,16 +553,117 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
                 </div>
               )}
 
-              <div className="max-h-40 overflow-auto border border-input rounded-md bg-background">
-                {products.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
-                    <input type="checkbox" checked={selectedProducts.has(p.id)} onChange={() => toggleProduct(p.id)}
-                      className="rounded border-input" />
-                    <span className="text-foreground">{p.title}</span>
-                    <span className="text-muted-foreground text-xs ml-auto">{p.sku}</span>
-                  </label>
-                ))}
+              {/* Picker toolbar: search, filter by label, column visibility */}
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <div className="relative flex-1 min-w-[120px]">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={pickerSearch}
+                    onChange={(e) => setPickerSearch(e.target.value)}
+                    placeholder="Search…"
+                    className="w-full pl-7 pr-2 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+                {categories.length > 0 && selectionMode === "manual" && (
+                  <select
+                    value={filterCategoryId}
+                    onChange={(e) => setFilterCategoryId(e.target.value)}
+                    className="px-2 py-1.5 text-xs bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">All labels</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 px-2 py-1.5 text-xs border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
+                      <Columns3 className="w-3 h-3" />
+                      <span className="text-muted-foreground">{pickerCols.length}</span>
+                      <ChevronDown className="w-2.5 h-2.5 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    {ALL_PICKER_COLUMNS.map((col) => (
+                      <DropdownMenuCheckboxItem
+                        key={col.key}
+                        checked={pickerCols.includes(col.key)}
+                        onCheckedChange={() => togglePickerCol(col.key)}
+                      >
+                        {col.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
+
+              {/* Product table */}
+              <div className="max-h-64 overflow-auto border border-input rounded-md bg-background">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
+                    <tr className="border-b border-border">
+                      <th className="w-8 px-2 py-1.5">
+                        <Checkbox
+                          checked={filteredProducts.length > 0 && filteredProducts.every((p) => selectedProducts.has(p.id))}
+                          onCheckedChange={toggleAllFiltered}
+                        />
+                      </th>
+                      {pickerCols.map((col) => (
+                        <th
+                          key={col}
+                          className="px-2 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors select-none"
+                          onClick={() => col !== "image" && col !== "category" && col !== "tags" && handleSort(col)}
+                        >
+                          <span className="flex items-center gap-1">
+                            {ALL_PICKER_COLUMNS.find((c) => c.key === col)?.label}
+                            {sortCol === col && (
+                              <ArrowUpDown className="w-2.5 h-2.5 text-primary" />
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={pickerCols.length + 1} className="px-3 py-6 text-center text-muted-foreground">
+                          No products match filters
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProducts.map((p) => (
+                        <tr
+                          key={p.id}
+                          className={cn(
+                            "border-b border-border/50 transition-colors cursor-pointer",
+                            selectedProducts.has(p.id) ? "bg-primary/5" : "hover:bg-muted/30"
+                          )}
+                          onClick={() => toggleProduct(p.id)}
+                        >
+                          <td className="px-2 py-1.5">
+                            <Checkbox
+                              checked={selectedProducts.has(p.id)}
+                              onCheckedChange={() => toggleProduct(p.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </td>
+                          {pickerCols.map((col) => (
+                            <td key={col} className="px-2 py-1.5">
+                              {renderPickerCell(p, col)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Showing {filteredProducts.length} of {products.length} products
+              </p>
             </div>
 
             {/* Actions */}
