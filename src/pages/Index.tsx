@@ -369,6 +369,7 @@ const Index = () => {
                   categories={categories}
                   getProductsByCategory={getProductsByCategory}
                   desktopInline
+                  onSwitchToEditor={() => setActiveTab("editor")}
                 />
               </aside>
             </ResizablePanel>
