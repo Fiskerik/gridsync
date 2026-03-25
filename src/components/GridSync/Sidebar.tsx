@@ -41,6 +41,9 @@ export function Sidebar({
   advancedFilters,
   onAdvancedFiltersChange,
   filterOptions,
+  stores,
+  selectedStoreIds,
+  onSelectedStoreIdsChange,
 }: SidebarProps) {
   const counts: Record<string, number> = {
     all: totalProducts,
