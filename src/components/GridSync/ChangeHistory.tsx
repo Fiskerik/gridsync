@@ -22,10 +22,34 @@ interface EditHistoryEntry {
   reverted: boolean;
 }
 
+interface PushResult {
+  productId: string;
+  shopifyId: string;
+  success: boolean;
+  error?: string;
+}
+
+const FIELD_TO_DB_COLUMN: Record<string, string> = {
+  title: "title",
+  description: "description",
+  sku: "sku",
+  price: "price",
+  compareAtPrice: "compare_at_price",
+  inventory: "inventory",
+  status: "status",
+  vendor: "vendor",
+  productType: "product_type",
+  tags: "tags",
+  seoTitle: "seo_title",
+  seoDescription: "seo_description",
+  imageUrl: "image_url",
+};
+
 export function ChangeHistory() {
   const [history, setHistory] = useState<EditHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<string | null>(null);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -70,7 +94,16 @@ export function ChangeHistory() {
         };
       });
 
-      setHistory(mapped);
+      // Hide accidental duplicate events with same timestamp+shape
+      const seen = new Set<string>();
+      const deduped = mapped.filter((entry) => {
+        const signature = `${entry.timestamp}|${entry.description}|${entry.productsAffected}|${entry.fieldsChanged.join(",")}`;
+        if (seen.has(signature)) return false;
+        seen.add(signature);
+        return true;
+      });
+
+      setHistory(deduped);
     } catch (err) {
       console.error("Failed to fetch history:", err);
       toast.error("Failed to load change history");
@@ -83,25 +116,6 @@ export function ChangeHistory() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const handleRevert = async (id: string) => {
-    const entry = history.find((h) => h.id === id);
-    if (!entry) return;
-
-    const { error } = await supabase
-      .from("edit_history")
-      .update({ reverted: !entry.reverted })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Failed to update revert status");
-      return;
-    }
-
-    setHistory((prev) =>
-      prev.map((h) => (h.id === id ? { ...h, reverted: !h.reverted } : h))
-    );
-  };
-
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return (
@@ -109,6 +123,118 @@ export function ChangeHistory() {
       " at " +
       d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     );
+  };
+
+  const handleRevert = async (id: string) => {
+    const entry = history.find((h) => h.id === id);
+    if (!entry || actioningId) return;
+
+    setActioningId(id);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      const productIds = [...new Set(entry.changes.map((c) => c.productId))];
+      if (productIds.length === 0) {
+        toast.error("No products found for this history event");
+        return;
+      }
+
+      const { data: productRows, error: productsErr } = await supabase
+        .from("products")
+        .select("id, shopify_id, store_id")
+        .in("id", productIds);
+
+      if (productsErr || !productRows) {
+        throw new Error(productsErr?.message || "Failed to load products for revert");
+      }
+
+      const productMap = new Map(productRows.map((p) => [p.id, p]));
+      const stagedByProduct = new Map<string, Record<string, unknown>>();
+
+      for (const change of entry.changes) {
+        const value = entry.reverted ? change.newValue : change.oldValue;
+        const current = stagedByProduct.get(change.productId) || {};
+        current[change.field] = value;
+        stagedByProduct.set(change.productId, current);
+      }
+
+      const payload = Array.from(stagedByProduct.entries())
+        .map(([productId, changes]) => {
+          const p = productMap.get(productId);
+          if (!p?.shopify_id || !p?.store_id) return null;
+          return {
+            productId,
+            shopifyId: p.shopify_id,
+            storeId: p.store_id,
+            changes,
+          };
+        })
+        .filter(Boolean);
+
+      if (payload.length === 0) {
+        throw new Error("No Shopify-linked products found for this history event");
+      }
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/push-shopify-changes`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ changes: payload }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `Revert failed: ${res.status}`);
+      }
+
+      const results = (data.results || []) as PushResult[];
+      const failed = results.filter((r) => !r.success);
+      if (failed.length > 0) {
+        const firstError = failed[0]?.error || "Some products failed to update";
+        toast.error("Revert partially failed", { description: firstError });
+        return;
+      }
+
+      // Keep local cache aligned with reverted values
+      for (const [productId, fields] of stagedByProduct.entries()) {
+        const dbUpdate: Record<string, unknown> = {};
+        Object.entries(fields).forEach(([field, value]) => {
+          const dbCol = FIELD_TO_DB_COLUMN[field];
+          if (dbCol) dbUpdate[dbCol] = value;
+        });
+        if (Object.keys(dbUpdate).length > 0) {
+          await supabase.from("products").update(dbUpdate).eq("id", productId);
+        }
+      }
+
+      const { error } = await supabase
+        .from("edit_history")
+        .update({ reverted: !entry.reverted })
+        .eq("id", id);
+
+      if (error) {
+        toast.error("Updated products, but failed to update history status");
+        return;
+      }
+
+      setHistory((prev) => prev.map((h) => (h.id === id ? { ...h, reverted: !h.reverted } : h)));
+      toast.success(entry.reverted ? "Edit reapplied successfully" : "Edit reverted successfully");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Revert failed";
+      toast.error("Failed to revert edit", { description: msg });
+    } finally {
+      setActioningId(null);
+    }
   };
 
   if (loading) {
@@ -215,6 +341,7 @@ export function ChangeHistory() {
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={actioningId === entry.id}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRevert(entry.id);
@@ -225,7 +352,11 @@ export function ChangeHistory() {
                       : "text-destructive border-destructive/30"
                   }
                 >
-                  {entry.reverted ? (
+                  {actioningId === entry.id ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing...
+                    </>
+                  ) : entry.reverted ? (
                     <>
                       <Check className="w-3 h-3 mr-1" /> Re-apply
                     </>
