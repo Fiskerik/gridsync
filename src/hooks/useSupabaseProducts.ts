@@ -217,9 +217,14 @@ export function useSupabaseProducts() {
         throw new Error("No products with Shopify IDs found in changes");
       }
 
+      // Use bulk mutations endpoint for large batches (>50), REST for small ones
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const hasInventoryChanges = changes.some((c) => c && "inventory" in (c as { changes: Record<string, unknown> }).changes);
+      const useBulk = changes.length > 50 && !hasInventoryChanges;
+      const endpoint = useBulk ? "bulk-shopify-mutations" : "push-shopify-changes";
+
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/push-shopify-changes`,
+        `https://${projectId}.supabase.co/functions/v1/${endpoint}`,
         {
           method: "POST",
           headers: {
