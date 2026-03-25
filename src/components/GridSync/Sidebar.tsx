@@ -57,6 +57,7 @@ export function Sidebar({
   categories = [],
   getProductsByCategory,
   desktopInline = false,
+  onSwitchToEditor,
 }: SidebarProps) {
   const counts: Record<string, number> = {
     all: totalProducts,
