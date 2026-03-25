@@ -1,47 +1,50 @@
+import { Layers } from "lucide-react";
+
 interface StatusBarProps {
   selectedCount: number;
   stagedChanges: number;
-  onBulkEditPrices: () => void;
-  onBulkApplyTags: () => void;
+  onBulkActions: () => void;
+  onReviewApply: () => void;
   onDiscardAll: () => void;
 }
 
 export function StatusBar({
   selectedCount,
   stagedChanges,
-  onBulkEditPrices,
-  onBulkApplyTags,
+  onBulkActions,
+  onReviewApply,
   onDiscardAll,
 }: StatusBarProps) {
   return (
     <div className="flex items-center gap-4 px-4 py-2.5 border-t border-border bg-muted/40">
       <span className="text-sm text-foreground font-medium">{selectedCount} selected</span>
       <span className="text-sm text-muted-foreground">|</span>
-      <span className="text-sm font-medium" style={{ color: stagedChanges > 0 ? "hsl(var(--changed))" : undefined }}>
+      <span className={`text-sm font-medium ${stagedChanges > 0 ? "text-accent" : "text-muted-foreground"}`}>
         {stagedChanges} staged changes
       </span>
 
       <div className="ml-auto flex items-center gap-2">
         <button
-          onClick={onBulkEditPrices}
+          onClick={onBulkActions}
           disabled={selectedCount === 0}
-          className="px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Bulk edit selected prices
-        </button>
-        <button
-          onClick={onBulkApplyTags}
-          disabled={selectedCount === 0}
-          className="px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Bulk apply tags
+          <Layers className="w-3.5 h-3.5" />
+          Bulk actions
         </button>
         <button
           onClick={onDiscardAll}
           disabled={stagedChanges === 0}
           className="px-3 py-1.5 text-sm border border-destructive/30 rounded-md text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Discard all changes
+          Discard all
+        </button>
+        <button
+          onClick={onReviewApply}
+          disabled={stagedChanges === 0}
+          className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+        >
+          Review & Apply
         </button>
       </div>
     </div>
