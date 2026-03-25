@@ -192,6 +192,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
 
     let actionParams: Record<string, string> = {};
     if (actionType === "price_percent") actionParams = { percent, field };
+    else if (actionType === "price_fixed") actionParams = { amount: fixedAmount, field };
     else if (actionType === "price_set") actionParams = { price: fixedPrice, field };
     else if (actionType === "find_replace") actionParams = { field, find: findText, replace: replaceText };
     else if (actionType === "set_tags") actionParams = { tags, action: tagAction };
