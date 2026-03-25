@@ -431,6 +431,8 @@ const Index = () => {
               onShowBeforeChange={setShowBefore}
               hasChanges={changedCells.size > 0}
               onOpenFilters={() => setMobileSidebarOpen(true)}
+              stores={stores}
+              onSyncStores={handleSyncStores}
             />
             <InfoBanner />
             {loading ? (
