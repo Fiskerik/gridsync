@@ -388,6 +388,7 @@ const Index = () => {
           products={shopifyProducts}
           changedCells={changedCells}
           onApply={handleApply}
+          onAutoFixChange={handleAutoFixChange}
           onDiscard={() => {
             setChangedCells(new Map());
             setReviewOpen(false);
