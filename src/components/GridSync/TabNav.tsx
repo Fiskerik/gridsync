@@ -57,8 +57,8 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
         </button>
 
         <div className="flex items-center gap-1.5 mr-2 md:mr-4 py-2.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-success" />
-          <span className="font-bold text-foreground text-sm tracking-tight">GridSync</span>
+          <img src={syncroniceLogo} alt="SyncroNice" className="w-6 h-6 rounded" />
+          <span className="font-bold text-foreground text-sm tracking-tight">SyncroNice</span>
         </div>
 
         {/* Mobile: show current tab name */}
