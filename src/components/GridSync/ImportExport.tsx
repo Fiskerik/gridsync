@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/data/mockProducts";
-import { ShopifyStore } from "@/hooks/useSupabaseProducts";
+import { ShopifyStore, ShopifyPushResult } from "@/hooks/useSupabaseProducts";
 import { toast } from "sonner";
 
 type SyncStatus = "idle" | "syncing" | "pushing" | "done" | "error";
@@ -29,7 +29,11 @@ interface ImportExportProps {
   importFromShopify: (storeId: string) => Promise<{ success: boolean; imported: number }>;
   pushChangesToShopify: (
     changedCells: Map<string, Record<string, unknown>>
-  ) => Promise<{ success: boolean; summary: { total: number; succeeded: number; failed: number } }>;
+  ) => Promise<{
+    success: boolean;
+    summary: { total: number; succeeded: number; failed: number };
+    results: ShopifyPushResult[];
+  }>;
   connectStore: (shopDomain: string) => Promise<string | null>;
   disconnectStore: (storeId: string) => Promise<void>;
   onStoreConnected?: () => void;
@@ -151,12 +155,32 @@ export function ImportExport({
     setSyncResult("");
     try {
       const result = await pushChangesToShopify(changedCells);
-      const { succeeded, failed } = result.summary;
-      setSyncResult(`${succeeded} products updated, ${failed} failed`);
-      setSyncStatus("done");
-      toast.success(`Pushed changes to Shopify`, {
-        description: `${succeeded} updated, ${failed} failed`,
-      });
+      const { succeeded, failed, total } = result.summary;
+      const firstError = result.results.find((r) => !r.success)?.error;
+
+      if (succeeded === 0 && failed > 0) {
+        setSyncStatus("error");
+        setSyncResult(firstError || `${failed}/${total} products failed to update`);
+        toast.error("Push failed", {
+          description: firstError || `All ${failed} products failed to update`,
+        });
+        return;
+      }
+
+      if (failed > 0) {
+        setSyncStatus("done");
+        setSyncResult(`${succeeded} products updated, ${failed} failed${firstError ? ` · ${firstError}` : ""}`);
+        toast.warning("Push partially completed", {
+          description: `${succeeded} updated, ${failed} failed`,
+        });
+      } else {
+        setSyncStatus("done");
+        setSyncResult(`${succeeded} products updated`);
+        toast.success("Pushed changes to Shopify", {
+          description: `${succeeded} products updated successfully`,
+        });
+      }
+
       onPushComplete?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Push failed";
