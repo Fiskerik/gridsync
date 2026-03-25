@@ -287,6 +287,9 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
     if (job.action_type === "price_percent") {
       setPercent(params.percent || "10");
       setField(params.field || "price");
+    } else if (job.action_type === "price_fixed") {
+      setFixedAmount(params.amount || "5");
+      setField(params.field || "price");
     } else if (job.action_type === "price_set") {
       setFixedPrice(params.price || "0");
       setField(params.field || "price");
