@@ -174,10 +174,10 @@ export function ScheduledJobs({ products }: ScheduledJobsProps) {
   };
 
   const toggleAllProducts = () => {
-    if (selectedProducts.size === mockProducts.length) {
+    if (selectedProducts.size === products.length) {
       setSelectedProducts(new Set());
     } else {
-      setSelectedProducts(new Set(mockProducts.map((p) => p.id)));
+      setSelectedProducts(new Set(products.map((p) => p.id)));
     }
   };
 
