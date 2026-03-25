@@ -1,4 +1,4 @@
-import { Layers } from "lucide-react";
+import { InlineStack, Text } from "@shopify/polaris";
 
 interface StatusBarProps {
   selectedCount: number;
@@ -17,21 +17,20 @@ export function StatusBar({
 }: StatusBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 md:gap-4 px-3 md:px-4 py-2 md:py-2.5 border-t border-border bg-muted/40">
-      <div className="flex items-center gap-2 md:gap-4">
-        <span className="text-xs md:text-sm text-foreground font-medium">{selectedCount} sel.</span>
+      <InlineStack gap="200" blockAlign="center">
+        <Text as="span" variant="bodySm" fontWeight="semibold">{selectedCount} sel.</Text>
         <span className="text-muted-foreground hidden md:inline">|</span>
         <span className={`text-xs md:text-sm font-medium ${stagedChanges > 0 ? "text-accent" : "text-muted-foreground"}`}>
           {stagedChanges} staged
         </span>
-      </div>
+      </InlineStack>
 
       <div className="ml-auto flex items-center gap-1.5 md:gap-2">
         <button
           onClick={onBulkActions}
           disabled={selectedCount === 0}
-          className="flex items-center gap-1 px-2 md:px-3 py-1.5 text-xs md:text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="Polaris-Button Polaris-Button--sizeSlim flex items-center gap-1 px-2 md:px-3 py-1.5 text-xs md:text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <Layers className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Bulk actions</span>
           <span className="sm:hidden">Bulk</span>
         </button>
