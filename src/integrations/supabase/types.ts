@@ -14,7 +14,177 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      edit_history: {
+        Row: {
+          created_at: string
+          description: string
+          fields_changed: string[]
+          id: string
+          products_affected: number
+          reverted: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          fields_changed?: string[]
+          id?: string
+          products_affected?: number
+          reverted?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          fields_changed?: string[]
+          id?: string
+          products_affected?: number
+          reverted?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      edit_history_changes: {
+        Row: {
+          created_at: string
+          edit_history_id: string
+          field: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          edit_history_id: string
+          field: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          edit_history_id?: string
+          field?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edit_history_changes_edit_history_id_fkey"
+            columns: ["edit_history_id"]
+            isOneToOne: false
+            referencedRelation: "edit_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edit_history_changes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          collections: string[]
+          compare_at_price: number | null
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          inventory: number
+          price: number
+          product_type: string
+          seo_description: string
+          seo_title: string
+          shopify_id: string | null
+          sku: string
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+          variants: number
+          vendor: string
+        }
+        Insert: {
+          collections?: string[]
+          compare_at_price?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          inventory?: number
+          price?: number
+          product_type?: string
+          seo_description?: string
+          seo_title?: string
+          shopify_id?: string | null
+          sku?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id: string
+          variants?: number
+          vendor?: string
+        }
+        Update: {
+          collections?: string[]
+          compare_at_price?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          inventory?: number
+          price?: number
+          product_type?: string
+          seo_description?: string
+          seo_title?: string
+          shopify_id?: string | null
+          sku?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+          variants?: number
+          vendor?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          id: string
+          shop_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id: string
+          shop_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          shop_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
