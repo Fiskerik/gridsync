@@ -333,7 +333,7 @@ export function ReviewPanel({ open, onClose, products, changedCells, onApply, on
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
             onClick={onApply}
-            disabled={changedCount === 0 || errors.length > 0 || !simulated}
+            disabled={changedCount === 0 || errors.length > 0}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Apply {changedCount} changes
