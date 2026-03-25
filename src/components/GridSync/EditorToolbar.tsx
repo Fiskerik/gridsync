@@ -43,6 +43,9 @@ export function EditorToolbar({
   onSearchChange,
   visibleColumns,
   onColumnsChange,
+  showBefore,
+  onShowBeforeChange,
+  hasChanges,
 }: EditorToolbarProps) {
   const toggleColumn = (key: ColumnKey) => {
     if (visibleColumns.includes(key)) {
