@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 interface ChangeDetail {
   productId: string;
+  productTitle?: string;
   field: string;
   oldValue: unknown;
   newValue: unknown;
@@ -73,11 +74,27 @@ export function ChangeHistory() {
 
       if (changesErr) throw changesErr;
 
+      // Collect all unique product IDs to fetch titles
+      const allProductIds = [...new Set((changes || []).map((c) => c.product_id))];
+      let productTitleMap = new Map<string, string>();
+
+      if (allProductIds.length > 0) {
+        const { data: productRows } = await supabase
+          .from("products")
+          .select("id, title")
+          .in("id", allProductIds);
+
+        if (productRows) {
+          productTitleMap = new Map(productRows.map((p) => [p.id, p.title]));
+        }
+      }
+
       const mapped: EditHistoryEntry[] = entries.map((entry) => {
         const entryChanges = (changes || [])
           .filter((c) => c.edit_history_id === entry.id)
           .map((c) => ({
             productId: c.product_id,
+            productTitle: productTitleMap.get(c.product_id) || `#${c.product_id.slice(0, 8)}`,
             field: c.field,
             oldValue: c.old_value,
             newValue: c.new_value,
@@ -94,7 +111,7 @@ export function ChangeHistory() {
         };
       });
 
-      // Hide accidental duplicate events with same timestamp+shape
+      // Deduplicate
       const seen = new Set<string>();
       const deduped = mapped.filter((entry) => {
         const signature = `${entry.timestamp}|${entry.description}|${entry.productsAffected}|${entry.fieldsChanged.join(",")}`;
@@ -258,6 +275,17 @@ export function ChangeHistory() {
     );
   }
 
+  // Group changes by product for better readability
+  const groupChangesByProduct = (changes: ChangeDetail[]) => {
+    const grouped = new Map<string, ChangeDetail[]>();
+    for (const c of changes) {
+      const list = grouped.get(c.productId) || [];
+      list.push(c);
+      grouped.set(c.productId, list);
+    }
+    return grouped;
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-3xl mx-auto">
       <div className="mb-6">
@@ -268,108 +296,122 @@ export function ChangeHistory() {
       </div>
 
       <div className="space-y-3">
-        {history.map((entry) => (
-          <div
-            key={entry.id}
-            className={`border rounded-lg transition-colors ${
-              entry.reverted
-                ? "border-border bg-muted/30 opacity-60"
-                : "border-border bg-card"
-            }`}
-          >
-            <button
-              onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-              className="w-full px-4 py-3 flex items-center gap-3 text-left"
-            >
-              <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium text-foreground">
-                    {entry.description}
-                  </span>
-                  {entry.reverted && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] text-destructive border-destructive/30"
-                    >
-                      Reverted
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(entry.timestamp)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">
-                    {entry.productsAffected} products
-                  </span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">
-                    {entry.fieldsChanged.join(", ")}
-                  </span>
-                </div>
-              </div>
-              {expandedId === entry.id ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-            </button>
+        {history.map((entry) => {
+          const isExpanded = expandedId === entry.id;
+          const grouped = isExpanded ? groupChangesByProduct(entry.changes) : null;
 
-            {expandedId === entry.id && (
-              <div className="px-4 pb-3 border-t border-border pt-3 ml-7">
-                <div className="space-y-1.5 mb-3">
-                  {entry.changes.map((c, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground w-16 shrink-0 font-mono truncate">
-                        #{c.productId.slice(0, 8)}
-                      </span>
-                      <span className="text-muted-foreground w-28 shrink-0 capitalize">
-                        {c.field.replace(/([A-Z])/g, " $1").trim()}
-                      </span>
-                      <span className="bg-destructive/10 text-destructive line-through px-1.5 py-0.5 rounded">
-                        {c.oldValue != null ? String(c.oldValue) : "—"}
-                      </span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="bg-success/10 text-success px-1.5 py-0.5 rounded">
-                        {c.newValue != null ? String(c.newValue) : "—"}
-                      </span>
-                    </div>
-                  ))}
+          return (
+            <div
+              key={entry.id}
+              className={`border rounded-lg transition-colors ${
+                entry.reverted
+                  ? "border-border bg-muted/30 opacity-60"
+                  : "border-border bg-card"
+              }`}
+            >
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                className="w-full px-4 py-3 flex items-center gap-3 text-left"
+              >
+                <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-foreground">
+                      {entry.description}
+                    </span>
+                    {entry.reverted && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] text-destructive border-destructive/30"
+                      >
+                        Reverted
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(entry.timestamp)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      {entry.productsAffected} products
+                    </span>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <span className="text-xs text-muted-foreground">
+                      {entry.fieldsChanged.join(", ")}
+                    </span>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={actioningId === entry.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRevert(entry.id);
-                  }}
-                  className={
-                    entry.reverted
-                      ? "text-success border-success/30"
-                      : "text-destructive border-destructive/30"
-                  }
-                >
-                  {actioningId === entry.id ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing...
-                    </>
-                  ) : entry.reverted ? (
-                    <>
-                      <Check className="w-3 h-3 mr-1" /> Re-apply
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw className="w-3 h-3 mr-1" /> Revert this edit
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        ))}
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+
+              {isExpanded && grouped && (
+                <div className="px-4 pb-3 border-t border-border pt-3 ml-7 space-y-4">
+                  {Array.from(grouped.entries()).map(([productId, productChanges]) => {
+                    const productTitle = productChanges[0]?.productTitle || `#${productId.slice(0, 8)}`;
+                    return (
+                      <div key={productId}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-xs font-semibold text-foreground">{productTitle}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">#{productId.slice(0, 8)}</span>
+                        </div>
+                        <div className="space-y-1 ml-2">
+                          {productChanges.map((c, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground w-28 shrink-0 capitalize">
+                                {c.field.replace(/([A-Z])/g, " $1").trim()}
+                              </span>
+                              <span className="bg-destructive/10 text-destructive line-through px-1.5 py-0.5 rounded truncate max-w-[160px]">
+                                {c.oldValue != null ? String(c.oldValue) : "—"}
+                              </span>
+                              <span className="text-muted-foreground">→</span>
+                              <span className="bg-success/10 text-success px-1.5 py-0.5 rounded truncate max-w-[160px]">
+                                {c.newValue != null ? String(c.newValue) : "—"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={actioningId === entry.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRevert(entry.id);
+                    }}
+                    className={
+                      entry.reverted
+                        ? "text-success border-success/30"
+                        : "text-destructive border-destructive/30"
+                    }
+                  >
+                    {actioningId === entry.id ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing...
+                      </>
+                    ) : entry.reverted ? (
+                      <>
+                        <Check className="w-3 h-3 mr-1" /> Re-apply
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="w-3 h-3 mr-1" /> Revert this edit
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
