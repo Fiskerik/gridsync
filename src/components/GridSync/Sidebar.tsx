@@ -1,6 +1,7 @@
-import { Zap, X, Store, Check, Filter } from "lucide-react";
+import { Zap, X, Store, Check, Filter, Tag } from "lucide-react";
 import { AdvancedFilters } from "@/pages/Index";
 import { ShopifyStore } from "@/hooks/useSupabaseProducts";
+import { Category } from "@/hooks/useCategories";
 
 interface SidebarProps {
   activeFilter: string;
@@ -23,6 +24,9 @@ interface SidebarProps {
   onSelectedStoreIdsChange: (ids: Set<string>) => void;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  categories?: Category[];
+  getProductsByCategory?: (categoryId: string) => string[];
+  desktopInline?: boolean;
 }
 
 const smartSelects = [
@@ -48,6 +52,9 @@ export function Sidebar({
   onSelectedStoreIdsChange,
   mobileOpen = false,
   onMobileClose,
+  categories = [],
+  getProductsByCategory,
+  desktopInline = false,
 }: SidebarProps) {
   const counts: Record<string, number> = {
     all: totalProducts,
@@ -114,6 +121,36 @@ export function Sidebar({
           {collections.map((c) => (
             <SidebarButton key={c} id={`collection:${c}`} label={c} />
           ))}
+        </div>
+      )}
+
+      {/* Categories */}
+      {categories.length > 0 && (
+        <div>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 mb-1.5 flex items-center gap-1">
+            <Tag className="w-3 h-3" />
+            Categories
+          </h3>
+          {categories.map((cat) => {
+            const count = getProductsByCategory?.(cat.id)?.length || 0;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleFilterChange(`category:${cat.id}`)}
+                className={`w-full flex items-center justify-between px-4 py-1.5 text-sm transition-colors ${
+                  activeFilter === `category:${cat.id}`
+                    ? "bg-sidebar-accent text-foreground font-semibold"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="truncate">{cat.name}</span>
+                </span>
+                <span className="text-muted-foreground text-xs">{count}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -289,13 +326,13 @@ export function Sidebar({
     </>
   );
 
+  // Desktop inline mode - render content directly without wrappers
+  if (desktopInline) {
+    return <>{sidebarContent}</>;
+  }
+
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 shrink-0 border-r border-border bg-sidebar py-4 flex-col gap-4 overflow-y-auto">
-        {sidebarContent}
-      </aside>
-
       {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">

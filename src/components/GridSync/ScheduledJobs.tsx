@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { CalendarIcon, Clock, Plus, Trash2, Play, Pause, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Product } from "@/data/mockProducts";
+import { Category } from "@/hooks/useCategories";
 import { toast } from "sonner";
 
 interface ScheduledJob {
@@ -48,9 +49,11 @@ function StatusBadge({ status }: { status: string }) {
 
 interface ScheduledJobsProps {
   products: Product[];
+  categories?: Category[];
+  getProductsByCategory?: (categoryId: string) => string[];
 }
 
-export function ScheduledJobs({ products }: ScheduledJobsProps) {
+export function ScheduledJobs({ products, categories = [], getProductsByCategory }: ScheduledJobsProps) {
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -68,6 +71,8 @@ export function ScheduledJobs({ products }: ScheduledJobsProps) {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("09:00");
+  const [selectionMode, setSelectionMode] = useState<"manual" | "category">("manual");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -80,6 +85,14 @@ export function ScheduledJobs({ products }: ScheduledJobsProps) {
   };
 
   useEffect(() => { fetchJobs(); }, []);
+
+  // When category selection changes, auto-select the products in that category
+  useEffect(() => {
+    if (selectionMode === "category" && selectedCategoryId && getProductsByCategory) {
+      const productIds = getProductsByCategory(selectedCategoryId);
+      setSelectedProducts(new Set(productIds));
+    }
+  }, [selectionMode, selectedCategoryId, getProductsByCategory]);
 
   const handleCreate = async () => {
     if (!date || selectedProducts.size === 0 || !name.trim()) {
@@ -141,6 +154,8 @@ export function ScheduledJobs({ products }: ScheduledJobsProps) {
     setSelectedProducts(new Set());
     setDate(undefined);
     setTime("09:00");
+    setSelectionMode("manual");
+    setSelectedCategoryId("");
   };
 
   const handleCancel = async (jobId: string) => {
@@ -329,10 +344,46 @@ export function ScheduledJobs({ products }: ScheduledJobsProps) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Products ({selectedProducts.size} selected)</label>
-                <button onClick={toggleAllProducts} className="text-xs text-primary hover:underline">
-                  {selectedProducts.size === products.length ? "Deselect all" : "Select all"}
-                </button>
+                <div className="flex items-center gap-2">
+                  {categories.length > 0 && (
+                    <div className="flex items-center gap-1 border border-input rounded-md overflow-hidden">
+                      <button
+                        onClick={() => { setSelectionMode("manual"); setSelectedCategoryId(""); }}
+                        className={`px-2 py-1 text-xs transition-colors ${selectionMode === "manual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                      >
+                        Manual
+                      </button>
+                      <button
+                        onClick={() => setSelectionMode("category")}
+                        className={`px-2 py-1 text-xs transition-colors ${selectionMode === "category" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                      >
+                        By Category
+                      </button>
+                    </div>
+                  )}
+                  {selectionMode === "manual" && (
+                    <button onClick={toggleAllProducts} className="text-xs text-primary hover:underline">
+                      {selectedProducts.size === products.length ? "Deselect all" : "Select all"}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {selectionMode === "category" && categories.length > 0 && (
+                <div className="mb-2">
+                  <select
+                    value={selectedCategoryId}
+                    onChange={(e) => setSelectedCategoryId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">Select a category...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="max-h-40 overflow-auto border border-input rounded-md bg-background">
                 {products.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
