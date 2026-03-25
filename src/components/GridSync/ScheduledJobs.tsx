@@ -330,11 +330,11 @@ export function ScheduledJobs({ products }: ScheduledJobsProps) {
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Products ({selectedProducts.size} selected)</label>
                 <button onClick={toggleAllProducts} className="text-xs text-primary hover:underline">
-                  {selectedProducts.size === mockProducts.length ? "Deselect all" : "Select all"}
+                  {selectedProducts.size === products.length ? "Deselect all" : "Select all"}
                 </button>
               </div>
               <div className="max-h-40 overflow-auto border border-input rounded-md bg-background">
-                {mockProducts.map((p) => (
+                {products.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
                     <input type="checkbox" checked={selectedProducts.has(p.id)} onChange={() => toggleProduct(p.id)}
                       className="rounded border-input" />
