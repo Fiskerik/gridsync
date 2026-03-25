@@ -6,12 +6,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SHOPIFY_STORE = "ea-consult-test-store.myshopify.com";
 const SHOPIFY_API_VERSION = "2025-07";
 
 interface ProductChange {
-  productId: string; // Supabase product UUID
-  shopifyId: string; // Shopify numeric product ID
+  productId: string;
+  shopifyId: string;
+  storeId: string;
   changes: Record<string, unknown>;
 }
 
@@ -30,16 +30,8 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const shopifyToken = Deno.env.get("SHOPIFY_ACCESS_TOKEN");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    if (!shopifyToken) {
-      return new Response(
-        JSON.stringify({ error: "SHOPIFY_ACCESS_TOKEN not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Verify the user
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const { data: { user }, error: authError } = await anonClient.auth.getUser(
       authHeader.replace("Bearer ", "")
@@ -61,11 +53,39 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get unique store IDs from changes
+    const storeIds = [...new Set(changes.map((c) => c.storeId).filter(Boolean))];
+
+    // Fetch store credentials
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    const { data: stores, error: storesError } = await supabaseClient
+      .from("shopify_stores")
+      .select("id, shop_domain, access_token")
+      .in("id", storeIds)
+      .eq("user_id", user.id);
+
+    if (storesError || !stores) {
+      return new Response(JSON.stringify({ error: "Failed to fetch store credentials" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const storeMap = new Map(stores.map((s) => [s.id, s]));
+
     const results: { shopifyId: string; success: boolean; error?: string }[] = [];
 
     for (const change of changes) {
       try {
-        // Map local field names to Shopify Admin API product fields
+        const store = storeMap.get(change.storeId);
+        if (!store) {
+          results.push({ shopifyId: change.shopifyId, success: false, error: "Store not found" });
+          continue;
+        }
+
+        const shopDomain = store.shop_domain;
+        const shopifyToken = store.access_token;
+
         const product: Record<string, unknown> = { id: parseInt(change.shopifyId) };
 
         if (change.changes.title !== undefined) product.title = change.changes.title;
@@ -79,7 +99,6 @@ Deno.serve(async (req) => {
             : change.changes.tags;
         }
 
-        // Price and compare-at price go on the first variant
         const variantUpdates: Record<string, unknown> = {};
         if (change.changes.price !== undefined) variantUpdates.price = String(change.changes.price);
         if (change.changes.compareAtPrice !== undefined) {
@@ -88,14 +107,10 @@ Deno.serve(async (req) => {
             : null;
         }
         if (change.changes.sku !== undefined) variantUpdates.sku = change.changes.sku;
-        if (change.changes.inventory !== undefined) {
-          // Inventory can't be set via product update; we skip it for now
-        }
 
-        // If there are variant-level changes, we need to fetch current variants first
         if (Object.keys(variantUpdates).length > 0) {
           const varRes = await fetch(
-            `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/products/${change.shopifyId}/variants.json`,
+            `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/products/${change.shopifyId}/variants.json`,
             {
               headers: {
                 "X-Shopify-Access-Token": shopifyToken,
@@ -110,12 +125,12 @@ Deno.serve(async (req) => {
               product.variants = [{ id: firstVariant.id, ...variantUpdates }];
             }
           } else {
-            await varRes.text(); // consume body
+            await varRes.text();
           }
         }
 
         const res = await fetch(
-          `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/products/${change.shopifyId}.json`,
+          `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/products/${change.shopifyId}.json`,
           {
             method: "PUT",
             headers: {
@@ -130,11 +145,10 @@ Deno.serve(async (req) => {
           const body = await res.text();
           results.push({ shopifyId: change.shopifyId, success: false, error: `[${res.status}]: ${body}` });
         } else {
-          await res.json(); // consume body
+          await res.json();
           results.push({ shopifyId: change.shopifyId, success: true });
         }
 
-        // Rate limit: Shopify allows 2 req/sec for REST
         await new Promise((r) => setTimeout(r, 550));
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown error";

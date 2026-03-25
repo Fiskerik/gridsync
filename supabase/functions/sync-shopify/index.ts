@@ -6,7 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SHOPIFY_STORE = "ea-consult-test-store.myshopify.com";
 const SHOPIFY_API_VERSION = "2025-07";
 
 interface ShopifyProduct {
@@ -47,17 +46,8 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const shopifyToken = Deno.env.get("SHOPIFY_ACCESS_TOKEN");
-
-    if (!shopifyToken) {
-      return new Response(
-        JSON.stringify({ error: "SHOPIFY_ACCESS_TOKEN not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Verify the user
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const { data: { user }, error: authError } = await anonClient.auth.getUser(
       authHeader.replace("Bearer ", "")
@@ -70,6 +60,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    const body = await req.json();
+    const storeId: string | undefined = body.store_id;
+
+    if (!storeId) {
+      return new Response(JSON.stringify({ error: "Missing store_id" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get store credentials from database
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    const { data: store, error: storeError } = await supabaseClient
+      .from("shopify_stores")
+      .select("*")
+      .eq("id", storeId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (storeError || !store) {
+      return new Response(
+        JSON.stringify({ error: "Store not found or unauthorized" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const shopifyToken = store.access_token;
+    const shopDomain = store.shop_domain;
+
     // Fetch all products from Shopify Admin API (paginated)
     const allProducts: ShopifyProduct[] = [];
     let pageInfo: string | null = null;
@@ -78,7 +97,7 @@ Deno.serve(async (req) => {
     while (hasNext) {
       const url = pageInfo
         ? pageInfo
-        : `https://${SHOPIFY_STORE}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=250`;
+        : `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=250`;
 
       const res = await fetch(url, {
         headers: {
@@ -88,14 +107,13 @@ Deno.serve(async (req) => {
       });
 
       if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Shopify API error [${res.status}]: ${body}`);
+        const respBody = await res.text();
+        throw new Error(`Shopify API error [${res.status}]: ${respBody}`);
       }
 
       const data = await res.json();
       allProducts.push(...(data.products || []));
 
-      // Check for next page via Link header
       const linkHeader = res.headers.get("Link");
       if (linkHeader && linkHeader.includes('rel="next"')) {
         const match = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
@@ -106,7 +124,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Upsert products into Supabase
+    // Build rows
     const rows = allProducts.map((p) => {
       const firstVariant = p.variants?.[0];
       const tags = p.tags ? p.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
@@ -114,6 +132,7 @@ Deno.serve(async (req) => {
       return {
         shopify_id: String(p.id),
         user_id: user.id,
+        store_id: storeId,
         title: p.title || "",
         description: (p.body_html || "").replace(/<[^>]*>/g, ""),
         sku: firstVariant?.sku || "",
@@ -136,11 +155,10 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Delete existing products for this user, then insert fresh
-    await supabaseClient.from("products").delete().eq("user_id", user.id);
+    // Delete existing products for this user+store, then insert fresh
+    await supabaseClient.from("products").delete().eq("user_id", user.id).eq("store_id", storeId);
 
     if (rows.length > 0) {
-      // Insert in batches of 100
       for (let i = 0; i < rows.length; i += 100) {
         const batch = rows.slice(i, i + 100);
         const { error: insertError } = await supabaseClient.from("products").insert(batch);
