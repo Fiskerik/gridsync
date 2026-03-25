@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ApplyProgressProps {
   open: boolean;
@@ -20,7 +21,6 @@ export function ApplyProgress({ open, totalChanges, onComplete }: ApplyProgressP
         if (p >= 100) {
           clearInterval(interval);
           setPhase("done");
-          setTimeout(onComplete, 1200);
           return 100;
         }
         return Math.min(p + Math.random() * 15 + 5, 100);
@@ -41,6 +41,9 @@ export function ApplyProgress({ open, totalChanges, onComplete }: ApplyProgressP
             <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-foreground">Changes applied!</h3>
             <p className="text-sm text-muted-foreground mt-1">{totalChanges} fields updated successfully. A snapshot has been saved.</p>
+            <Button onClick={onComplete} className="mt-4">
+              OK
+            </Button>
           </>
         ) : (
           <>

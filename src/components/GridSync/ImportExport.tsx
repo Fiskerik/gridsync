@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Upload,
   Download,
@@ -45,7 +45,7 @@ function productsToCsv(products: Product[]): string {
   const rows = products.map((p) =>
     EXPORTABLE_FIELDS.map((f) => {
       const val = p[f];
-      if (Array.isArray(val)) return `"${val.join("; ")}"`;
+      if (Array.isArray(val)) return `"${val.join("\t")}"`;
       if (typeof val === "string" && (val.includes(",") || val.includes('"') || val.includes("\n")))
         return `"${val.replace(/"/g, '""')}"`;
       return val ?? "";
@@ -72,6 +72,13 @@ export function ImportExport({
   const [showAddStore, setShowAddStore] = useState(false);
   const [newShopDomain, setNewShopDomain] = useState("");
   const [connecting, setConnecting] = useState(false);
+
+  // Reset sync status when changed cells change so push button isn't stuck
+  useEffect(() => {
+    if (syncStatus === "done" || syncStatus === "error") {
+      setSyncStatus("idle");
+    }
+  }, [changedCells]);
 
   const handleConnectStore = useCallback(async () => {
     if (!newShopDomain.trim()) {
