@@ -1,5 +1,5 @@
 import { Badge as PolarisBadge, Tabs, Button as PolarisButton, Text, InlineStack, Icon } from "@shopify/polaris";
-import { LogOutIcon, PersonIcon } from "@shopify/polaris-icons";
+import { ExitIcon, PersonIcon } from "@shopify/polaris-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";

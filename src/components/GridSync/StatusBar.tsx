@@ -1,5 +1,4 @@
-import { Button as PolarisButton, InlineStack, Text, Badge as PolarisBadge } from "@shopify/polaris";
-import { Layers } from "lucide-react";
+import { InlineStack, Text } from "@shopify/polaris";
 
 interface StatusBarProps {
   selectedCount: number;
@@ -27,35 +26,30 @@ export function StatusBar({
       </InlineStack>
 
       <div className="ml-auto flex items-center gap-1.5 md:gap-2">
-        <PolarisButton
+        <button
           onClick={onBulkActions}
           disabled={selectedCount === 0}
-          variant="secondary"
-          size="micro"
-          icon={<Layers className="w-3.5 h-3.5" />}
+          className="Polaris-Button Polaris-Button--sizeSlim flex items-center gap-1 px-2 md:px-3 py-1.5 text-xs md:text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="hidden sm:inline">Bulk actions</span>
           <span className="sm:hidden">Bulk</span>
-        </PolarisButton>
-        <PolarisButton
+        </button>
+        <button
           onClick={onDiscardAll}
           disabled={stagedChanges === 0}
-          variant="secondary"
-          size="micro"
-          tone="critical"
+          className="px-2 md:px-3 py-1.5 text-xs md:text-sm border border-destructive/30 rounded-md text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="hidden sm:inline">Discard all</span>
           <span className="sm:hidden">Discard</span>
-        </PolarisButton>
-        <PolarisButton
+        </button>
+        <button
           onClick={onReviewApply}
           disabled={stagedChanges === 0}
-          variant="primary"
-          size="micro"
+          className="px-2 md:px-3 py-1.5 text-xs md:text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium"
         >
           <span className="hidden sm:inline">Review & Apply</span>
           <span className="sm:hidden">Apply</span>
-        </PolarisButton>
+        </button>
       </div>
     </div>
   );
