@@ -341,6 +341,7 @@ const Index = () => {
             <ImportExport
               products={shopifyProducts}
               changedCells={changedCells}
+              stores={stores}
               onImportComplete={refetch}
               onPushComplete={() => {
                 setChangedCells(new Map());
@@ -348,9 +349,12 @@ const Index = () => {
               }}
               importFromShopify={importFromShopify}
               pushChangesToShopify={pushChangesToShopify}
+              connectStore={connectStore}
+              disconnectStore={disconnectStore}
+              onStoreConnected={refetchStores}
             />
           )}
-          {activeTab === "export-csv" && <ExportCsv />}
+          {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
         </div>
       </div>
 
