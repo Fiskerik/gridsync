@@ -88,6 +88,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
   const [name, setName] = useState("");
   const [actionType, setActionType] = useState("price_percent");
   const [percent, setPercent] = useState("10");
+  const [fixedAmount, setFixedAmount] = useState("5");
   const [fixedPrice, setFixedPrice] = useState("0");
   const [field, setField] = useState("price");
   const [findText, setFindText] = useState("");
