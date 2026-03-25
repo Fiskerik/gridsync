@@ -15,6 +15,7 @@ import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
 import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
