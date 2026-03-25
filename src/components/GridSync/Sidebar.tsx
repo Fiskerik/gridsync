@@ -28,6 +28,7 @@ interface SidebarProps {
   categories?: Category[];
   getProductsByCategory?: (categoryId: string) => string[];
   desktopInline?: boolean;
+  onSwitchToEditor?: () => void;
 }
 
 const smartSelects = [
