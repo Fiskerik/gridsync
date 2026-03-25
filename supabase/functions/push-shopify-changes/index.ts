@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
               productId: change.productId,
               shopifyId: change.shopifyId,
               success: false,
-              error: `Inventory update failed [${inventoryRes.status}]: ${body}. Reconnect the store to refresh scopes if needed.",
+              error: `Inventory update failed [${inventoryRes.status}]: ${body}. Reconnect the store to refresh scopes if needed.`,
             });
             continue;
           }
