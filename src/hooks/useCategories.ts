@@ -25,7 +25,7 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("product_categories")
       .select("*")
       .order("name");
@@ -33,7 +33,7 @@ export function useCategories() {
   }, []);
 
   const fetchAssignments = useCallback(async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("product_category_assignments")
       .select("product_id, category_id");
     if (!error && data) setAssignments(data as CategoryAssignment[]);
@@ -52,7 +52,7 @@ export function useCategories() {
     if (!user) return null;
 
     const finalColor = color || PRESET_COLORS[categories.length % PRESET_COLORS.length];
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("product_categories")
       .insert({ user_id: user.id, name: name.trim(), color: finalColor })
       .select()
@@ -63,12 +63,13 @@ export function useCategories() {
       else toast.error("Failed to create category");
       return null;
     }
-    setCategories((prev) => [...prev, data as Category]);
-    return data as Category;
+    const cat = data as Category;
+    setCategories((prev) => [...prev, cat]);
+    return cat;
   }, [categories.length]);
 
   const deleteCategory = useCallback(async (categoryId: string) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("product_categories")
       .delete()
       .eq("id", categoryId);
@@ -79,15 +80,18 @@ export function useCategories() {
   }, []);
 
   const assignCategory = useCallback(async (productId: string, categoryId: string) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("product_category_assignments")
       .insert({ product_id: productId, category_id: categoryId });
     if (error && error.code !== "23505") { toast.error("Failed to assign category"); return; }
-    setAssignments((prev) => [...prev.filter((a) => !(a.product_id === productId && a.category_id === categoryId)), { product_id: productId, category_id: categoryId }]);
+    setAssignments((prev) => [
+      ...prev.filter((a) => !(a.product_id === productId && a.category_id === categoryId)),
+      { product_id: productId, category_id: categoryId },
+    ]);
   }, []);
 
   const unassignCategory = useCallback(async (productId: string, categoryId: string) => {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("product_category_assignments")
       .delete()
       .eq("product_id", productId)
@@ -98,12 +102,24 @@ export function useCategories() {
 
   const assignCategoryToMany = useCallback(async (productIds: string[], categoryId: string) => {
     const rows = productIds.map((pid) => ({ product_id: pid, category_id: categoryId }));
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("product_category_assignments")
       .upsert(rows, { onConflict: "product_id,category_id" });
     if (error) { toast.error("Failed to assign categories"); return; }
     await fetchAssignments();
     toast.success(`Category assigned to ${productIds.length} products`);
+  }, [fetchAssignments]);
+
+  const unassignCategoryFromMany = useCallback(async (productIds: string[], categoryId: string) => {
+    for (const pid of productIds) {
+      await (supabase as any)
+        .from("product_category_assignments")
+        .delete()
+        .eq("product_id", pid)
+        .eq("category_id", categoryId);
+    }
+    await fetchAssignments();
+    toast.success(`Category removed from ${productIds.length} products`);
   }, [fetchAssignments]);
 
   const getProductCategories = useCallback((productId: string): Category[] => {
@@ -125,6 +141,7 @@ export function useCategories() {
     assignCategory,
     unassignCategory,
     assignCategoryToMany,
+    unassignCategoryFromMany,
     getProductCategories,
     getProductsByCategory,
     PRESET_COLORS,
