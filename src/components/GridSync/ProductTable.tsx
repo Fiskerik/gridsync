@@ -104,6 +104,7 @@ export function ProductTable({
   changedCells,
   onCellChange,
   visibleColumns,
+  showBefore = false,
 }: ProductTableProps) {
   const allSelected = products.length > 0 && selectedIds.size === products.length;
 
