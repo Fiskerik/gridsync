@@ -151,7 +151,7 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
               onClick={() => { setMobileMenuOpen(false); signOut(); }}
               className="w-full text-left px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-muted flex items-center gap-2"
             >
-              <Icon source={LogOutIcon} />
+              <Icon source={ExitIcon} />
               Sign out
             </button>
           </div>
