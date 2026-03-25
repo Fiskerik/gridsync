@@ -45,7 +45,7 @@ function productsToCsv(products: Product[]): string {
   const rows = products.map((p) =>
     EXPORTABLE_FIELDS.map((f) => {
       const val = p[f];
-      if (Array.isArray(val)) return `"${val.join("; ")}"`;
+      if (Array.isArray(val)) return `"${val.join("\t")}"`;
       if (typeof val === "string" && (val.includes(",") || val.includes('"') || val.includes("\n")))
         return `"${val.replace(/"/g, '""')}"`;
       return val ?? "";

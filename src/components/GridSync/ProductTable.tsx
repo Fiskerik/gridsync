@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Product } from "@/data/mockProducts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnKey } from "@/components/GridSync/EditorToolbar";
@@ -190,22 +190,82 @@ function CategoryCell({
   );
 }
 
-const columnConfig: Record<ColumnKey, { label: string; width?: string }> = {
-  image: { label: "Image", width: "w-14" },
-  title: { label: "Title", width: "min-w-[180px] max-w-[240px]" },
-  description: { label: "Description", width: "min-w-[200px] max-w-[300px]" },
-  sku: { label: "SKU", width: "w-24" },
-  price: { label: "Price", width: "w-24" },
-  compareAtPrice: { label: "Compare at", width: "w-24" },
-  inventory: { label: "Inventory", width: "w-28" },
-  status: { label: "Status", width: "w-20" },
-  vendor: { label: "Vendor", width: "w-24" },
-  category: { label: "Category", width: "min-w-[160px]" },
-  tags: { label: "Tags", width: "min-w-[140px]" },
-  seoTitle: { label: "SEO Title", width: "min-w-[180px] max-w-[240px]" },
-  productType: { label: "Type", width: "w-24" },
-  variants: { label: "Variants", width: "w-20" },
+const defaultColumnWidths: Record<ColumnKey, number> = {
+  image: 56,
+  title: 200,
+  description: 260,
+  sku: 100,
+  price: 100,
+  compareAtPrice: 100,
+  inventory: 112,
+  status: 80,
+  vendor: 100,
+  category: 180,
+  tags: 160,
+  seoTitle: 200,
+  productType: 100,
+  variants: 80,
 };
+
+const columnLabels: Record<ColumnKey, string> = {
+  image: "Image",
+  title: "Title",
+  description: "Description",
+  sku: "SKU",
+  price: "Price",
+  compareAtPrice: "Compare at",
+  inventory: "Inventory",
+  status: "Status",
+  vendor: "Vendor",
+  category: "Category",
+  tags: "Tags",
+  seoTitle: "SEO Title",
+  productType: "Type",
+  variants: "Variants",
+};
+
+function ResizableHeader({
+  col,
+  width,
+  onResize,
+}: {
+  col: ColumnKey;
+  width: number;
+  onResize: (col: ColumnKey, width: number) => void;
+}) {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = width;
+
+      const onMouseMove = (ev: MouseEvent) => {
+        const newWidth = Math.max(50, startWidth + ev.clientX - startX);
+        onResize(col, newWidth);
+      };
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [col, width, onResize]
+  );
+
+  return (
+    <th
+      className="px-3 py-2 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider relative select-none"
+      style={{ width: `${width}px`, minWidth: `${width}px` }}
+    >
+      {columnLabels[col]}
+      <div
+        onMouseDown={handleMouseDown}
+        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors"
+      />
+    </th>
+  );
+}
 
 export function ProductTable({
   products,
@@ -221,6 +281,12 @@ export function ProductTable({
   onUnassignCategory,
   onCreateCategory,
 }: ProductTableProps) {
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => ({ ...defaultColumnWidths }));
+
+  const handleColumnResize = useCallback((col: ColumnKey, width: number) => {
+    setColumnWidths((prev) => ({ ...prev, [col]: width }));
+  }, []);
+
   const allSelected = products.length > 0 && selectedIds.size === products.length;
 
   const toggleAll = () => {
@@ -325,16 +391,19 @@ export function ProductTable({
 
   return (
     <div className="flex-1 overflow-auto">
-      <table className="w-full text-sm">
+      <table className="text-sm" style={{ tableLayout: "fixed", width: "max-content", minWidth: "100%" }}>
         <thead className="sticky top-0 z-10">
           <tr className="border-b border-border bg-muted/80 backdrop-blur-sm">
-            <th className="w-10 px-3 py-2">
+            <th className="w-10 px-3 py-2" style={{ width: 40, minWidth: 40 }}>
               <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
             </th>
             {visibleColumns.map((col) => (
-              <th key={col} className={`px-3 py-2 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider ${columnConfig[col]?.width || ""}`}>
-                {columnConfig[col]?.label}
-              </th>
+              <ResizableHeader
+                key={col}
+                col={col}
+                width={columnWidths[col] || defaultColumnWidths[col]}
+                onResize={handleColumnResize}
+              />
             ))}
           </tr>
         </thead>
@@ -343,11 +412,15 @@ export function ProductTable({
             <tr key={p.id} className={`border-b border-border transition-colors ${
               selectedIds.has(p.id) ? "bg-primary/5" : "hover:bg-muted/30"
             } ${changedCells.has(p.id) ? "border-l-2 border-l-changed" : ""}`}>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2" style={{ width: 40 }}>
                 <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleOne(p.id)} />
               </td>
               {visibleColumns.map((col) => (
-                <td key={col} className={`px-3 py-2 ${columnConfig[col]?.width || ""}`}>
+                <td
+                  key={col}
+                  className="px-3 py-2 overflow-hidden"
+                  style={{ width: `${columnWidths[col] || defaultColumnWidths[col]}px`, minWidth: `${columnWidths[col] || defaultColumnWidths[col]}px` }}
+                >
                   {renderCell(p, col)}
                 </td>
               ))}

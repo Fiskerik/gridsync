@@ -55,7 +55,7 @@ export function ExportCsv({ products }: ExportCsvProps) {
     const rows = products.map((p) =>
       fields.map((f) => {
         const val = p[f.key];
-        if (Array.isArray(val)) return `"${val.join("; ")}"`;
+        if (Array.isArray(val)) return `"${val.join("\t")}"`;
         if (typeof val === "string" && (val.includes(",") || val.includes('"') || val.includes("\n")))
           return `"${val.replace(/"/g, '""')}"`;
         return val ?? "";
