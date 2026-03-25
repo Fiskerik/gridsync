@@ -11,6 +11,7 @@ interface ProductTableProps {
   changedCells: Map<string, Record<string, unknown>>;
   onCellChange: (productId: string, field: string, value: unknown) => void;
   visibleColumns: ColumnKey[];
+  showBefore?: boolean;
 }
 
 function InventoryBadge({ count }: { count: number }) {
