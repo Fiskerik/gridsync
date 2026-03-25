@@ -633,6 +633,25 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
                   </select>
                 </div>
               )}
+              {actionType === "price_fixed" && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Amount ($)</label>
+                    <input type="number" value={fixedAmount} onChange={(e) => setFixedAmount(e.target.value)}
+                      placeholder="e.g. -5 to lower by $5"
+                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+                    <p className="text-[10px] text-muted-foreground mt-1">Use negative to decrease, positive to increase</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Field</label>
+                    <select value={field} onChange={(e) => setField(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                      <option value="price">Price</option>
+                      <option value="compareAtPrice">Compare at Price</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               {/* Picker toolbar: search, filter by label, column visibility */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
