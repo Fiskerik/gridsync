@@ -1,4 +1,4 @@
-import { Search, Columns3, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { Search, Columns3, ChevronDown, Eye, EyeOff, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
