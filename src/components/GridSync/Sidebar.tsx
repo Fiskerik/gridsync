@@ -1,5 +1,6 @@
-import { Zap, ChevronDown, X } from "lucide-react";
+import { Zap, ChevronDown, X, Store, Check } from "lucide-react";
 import { AdvancedFilters } from "@/pages/Index";
+import { ShopifyStore } from "@/hooks/useSupabaseProducts";
 
 interface SidebarProps {
   activeFilter: string;
@@ -17,6 +18,9 @@ interface SidebarProps {
     tags: string[];
     collections: string[];
   };
+  stores: ShopifyStore[];
+  selectedStoreIds: Set<string>;
+  onSelectedStoreIdsChange: (ids: Set<string>) => void;
 }
 
 const smartSelects = [
