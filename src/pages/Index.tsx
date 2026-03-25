@@ -261,6 +261,8 @@ const Index = () => {
           stores={stores}
           selectedStoreIds={selectedStoreIds}
           onSelectedStoreIdsChange={setSelectedStoreIds}
+          mobileOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           {activeTab === "editor" && (
