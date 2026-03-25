@@ -328,7 +328,7 @@ const Index = () => {
             />
           )}
 
-          {activeTab === "scheduled" && <ScheduledJobs />}
+          {activeTab === "scheduled" && <ScheduledJobs products={shopifyProducts} />}
           {activeTab === "import" && (
             <ImportExport
               products={shopifyProducts}
