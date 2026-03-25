@@ -65,6 +65,7 @@ const Index = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
   const [showBefore, setShowBefore] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyAdvancedFilters);
 
   const filterOptions = useMemo(() => {
