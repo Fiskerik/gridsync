@@ -396,7 +396,7 @@ export function ImportExport({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  This will permanently disconnect <strong className="text-foreground">{deleteConfirmStore?.store_name}</strong> and remove all its synced products from GridSync.
+                  This will permanently disconnect <strong className="text-foreground">{deleteConfirmStore?.store_name}</strong> and remove all its synced products from SyncroNice.
                 </p>
                 <p>
                   To confirm, type the store name below:

@@ -1,8 +1,9 @@
-import { Badge as PolarisBadge, Tabs, Button as PolarisButton, Text, InlineStack, Icon } from "@shopify/polaris";
+import { InlineStack, Icon } from "@shopify/polaris";
 import { ExitIcon, PersonIcon } from "@shopify/polaris-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
+import syncroniceLogo from "@/assets/syncronice-logo.jpg";
 
 type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review" | "profile";
 
@@ -57,8 +58,8 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
         </button>
 
         <div className="flex items-center gap-1.5 mr-2 md:mr-4 py-2.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-success" />
-          <span className="font-bold text-foreground text-sm tracking-tight">GridSync</span>
+          <img src={syncroniceLogo} alt="SyncroNice" className="w-6 h-6 rounded" />
+          <span className="font-bold text-foreground text-sm tracking-tight">SyncroNice</span>
         </div>
 
         {/* Mobile: show current tab name */}
