@@ -6,9 +6,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type ColumnKey = "title" | "sku" | "price" | "compareAtPrice" | "inventory" | "status" | "vendor" | "tags" | "seoTitle" | "description" | "productType" | "variants";
+export type ColumnKey = "image" | "title" | "sku" | "price" | "compareAtPrice" | "inventory" | "status" | "vendor" | "category" | "tags" | "seoTitle" | "description" | "productType" | "variants";
 
 export const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: "image", label: "Image" },
   { key: "title", label: "Title" },
   { key: "description", label: "Description" },
   { key: "sku", label: "SKU" },
@@ -17,13 +18,14 @@ export const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "inventory", label: "Inventory" },
   { key: "status", label: "Status" },
   { key: "vendor", label: "Vendor" },
+  { key: "category", label: "Category" },
   { key: "tags", label: "Tags" },
   { key: "seoTitle", label: "SEO Title" },
   { key: "productType", label: "Type" },
   { key: "variants", label: "Variants" },
 ];
 
-export const DEFAULT_VISIBLE: ColumnKey[] = ["title", "sku", "price", "compareAtPrice", "inventory", "status", "vendor"];
+export const DEFAULT_VISIBLE: ColumnKey[] = ["image", "title", "sku", "price", "compareAtPrice", "inventory", "status", "vendor", "category"];
 
 interface EditorToolbarProps {
   productCount: number;

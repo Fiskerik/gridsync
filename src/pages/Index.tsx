@@ -15,9 +15,15 @@ import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
 import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
+import { useCategories } from "@/hooks/useCategories";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, GripVertical } from "lucide-react";
 import { toast } from "sonner";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 export interface AdvancedFilters {
   vendor: string;
@@ -55,6 +61,18 @@ const Index = () => {
     pushChangesToShopify,
   } = useSupabaseProducts();
 
+  const {
+    categories,
+    createCategory,
+    deleteCategory,
+    assignCategory,
+    unassignCategory,
+    assignCategoryToMany,
+    unassignCategoryFromMany,
+    getProductCategories,
+    getProductsByCategory,
+  } = useCategories();
+
   const [activeTab, setActiveTab] = useState<TabId>("editor");
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,6 +102,10 @@ const Index = () => {
     else if (activeFilter.startsWith("collection:")) {
       const col = activeFilter.replace("collection:", "");
       list = list.filter((p) => p.collection.includes(col));
+    } else if (activeFilter.startsWith("category:")) {
+      const catId = activeFilter.replace("category:", "");
+      const productIds = getProductsByCategory(catId);
+      list = list.filter((p) => productIds.includes(p.id));
     } else if (activeFilter === "changed") {
       list = list.filter((p) => changedCells.has(p.id));
     } else if (activeFilter === "smart:lowstock") {
@@ -127,7 +149,7 @@ const Index = () => {
       );
     }
     return list;
-  }, [activeFilter, searchQuery, changedCells, shopifyProducts, advancedFilters]);
+  }, [activeFilter, searchQuery, changedCells, shopifyProducts, advancedFilters, getProductsByCategory]);
 
   const handleCellChange = useCallback((productId: string, field: string, value: unknown) => {
     setChangedCells((prev) => {
@@ -140,6 +162,18 @@ const Index = () => {
   const handleBulkAction = useCallback(
     (action: string, params: Record<string, string>) => {
       const ids = Array.from(selectedIds);
+
+      // Handle category actions
+      if (action === "set_category") {
+        const categoryId = params.categoryId;
+        if (params.action === "remove") {
+          unassignCategoryFromMany(ids, categoryId);
+        } else {
+          assignCategoryToMany(ids, categoryId);
+        }
+        return;
+      }
+
       setChangedCells((prev) => {
         const next = new Map(prev);
         ids.forEach((id) => {
@@ -168,7 +202,7 @@ const Index = () => {
         return next;
       });
     },
-    [selectedIds, shopifyProducts]
+    [selectedIds, shopifyProducts, assignCategoryToMany, unassignCategoryFromMany]
   );
 
   const handleApply = useCallback(async () => {
@@ -219,10 +253,8 @@ const Index = () => {
   }, [shopifyProducts]);
 
   const handleApplyComplete = useCallback(async () => {
-    // Save edit history
     await saveEditHistory(changedCells);
 
-    // Push changes to Shopify
     try {
       const result = await pushChangesToShopify(changedCells);
       if (result.summary.failed > 0) {
@@ -247,6 +279,7 @@ const Index = () => {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} pendingChanges={stagedChanges} />
       <div className="flex flex-1 overflow-hidden">
+        {/* Mobile sidebar */}
         <Sidebar
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
@@ -263,105 +296,47 @@ const Index = () => {
           onSelectedStoreIdsChange={setSelectedStoreIds}
           mobileOpen={mobileSidebarOpen}
           onMobileClose={() => setMobileSidebarOpen(false)}
+          categories={categories}
+          getProductsByCategory={getProductsByCategory}
         />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {activeTab === "editor" && (
-            <>
-              <EditorToolbar
-                productCount={filteredProducts.length}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                visibleColumns={visibleColumns}
-                onColumnsChange={setVisibleColumns}
-                showBefore={showBefore}
-                onShowBeforeChange={setShowBefore}
-                hasChanges={changedCells.size > 0}
-                onOpenFilters={() => setMobileSidebarOpen(true)}
-              />
-              <InfoBanner />
-              {loading ? (
-                <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">Loading products...</span>
-                </div>
-              ) : error ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                  <p className="text-sm text-destructive">{error}</p>
-                  <button
-                    onClick={refetch}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md hover:bg-secondary transition-colors"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry
-                  </button>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <p className="text-lg font-medium text-foreground mb-1">No products found</p>
-                    <p className="text-sm">
-                      {shopifyProducts.length === 0
-                        ? "No products yet. Go to the Import tab to pull products from Shopify."
-                        : "Try adjusting your filters or search query."}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <ProductTable
-                  products={filteredProducts}
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  changedCells={changedCells}
-                  onCellChange={handleCellChange}
-                  visibleColumns={visibleColumns}
-                  showBefore={showBefore}
+
+        {/* Desktop: resizable panels */}
+        <div className="hidden md:flex flex-1 overflow-hidden">
+          <ResizablePanelGroup direction="horizontal">
+            <ResizablePanel defaultSize={18} minSize={12} maxSize={30}>
+              <aside className="h-full bg-sidebar py-4 flex flex-col gap-4 overflow-y-auto border-r border-border">
+                <Sidebar
+                  activeFilter={activeFilter}
+                  onFilterChange={setActiveFilter}
+                  totalProducts={shopifyProducts.length}
+                  activeCount={activeCount}
+                  draftCount={draftCount}
+                  pendingEdits={changedCells.size}
+                  collections={filterOptions.collections}
+                  advancedFilters={advancedFilters}
+                  onAdvancedFiltersChange={setAdvancedFilters}
+                  filterOptions={filterOptions}
+                  stores={stores}
+                  selectedStoreIds={selectedStoreIds}
+                  onSelectedStoreIdsChange={setSelectedStoreIds}
+                  categories={categories}
+                  getProductsByCategory={getProductsByCategory}
+                  desktopInline
                 />
-              )}
-              <StatusBar
-                selectedCount={selectedIds.size}
-                stagedChanges={stagedChanges}
-                onBulkActions={() => setBulkModalOpen(true)}
-                onReviewApply={() => setReviewOpen(true)}
-                onDiscardAll={() => setChangedCells(new Map())}
-              />
-            </>
-          )}
+              </aside>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={82}>
+              <div className="flex-1 flex flex-col overflow-hidden h-full">
+                {renderMainContent()}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
 
-          {activeTab === "history" && <ChangeHistory />}
-
-          {activeTab === "review" && (
-            <ReviewPanel
-              open={true}
-              onClose={() => setActiveTab("editor")}
-              products={shopifyProducts}
-              changedCells={changedCells}
-              onApply={handleApply}
-              onDiscard={() => {
-                setChangedCells(new Map());
-                setActiveTab("editor");
-              }}
-            />
-          )}
-
-          {activeTab === "scheduled" && <ScheduledJobs products={shopifyProducts} />}
-          {activeTab === "import" && (
-            <ImportExport
-              products={shopifyProducts}
-              changedCells={changedCells}
-              stores={stores}
-              onImportComplete={refetch}
-              onPushComplete={() => {
-                setChangedCells(new Map());
-                setSelectedIds(new Set());
-              }}
-              importFromShopify={importFromShopify}
-              pushChangesToShopify={pushChangesToShopify}
-              connectStore={connectStore}
-              disconnectStore={disconnectStore}
-              onStoreConnected={refetchStores}
-            />
-          )}
-          {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
+        {/* Mobile: no resizable */}
+        <div className="md:hidden flex-1 flex flex-col overflow-hidden">
+          {renderMainContent()}
         </div>
       </div>
 
@@ -370,6 +345,7 @@ const Index = () => {
         onClose={() => setBulkModalOpen(false)}
         selectedCount={selectedIds.size}
         onApplyAction={handleBulkAction}
+        categories={categories}
       />
 
       {activeTab === "editor" && (
@@ -393,6 +369,121 @@ const Index = () => {
       />
     </div>
   );
+
+  function renderMainContent() {
+    return (
+      <>
+        {activeTab === "editor" && (
+          <>
+            <EditorToolbar
+              productCount={filteredProducts.length}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              visibleColumns={visibleColumns}
+              onColumnsChange={setVisibleColumns}
+              showBefore={showBefore}
+              onShowBeforeChange={setShowBefore}
+              hasChanges={changedCells.size > 0}
+              onOpenFilters={() => setMobileSidebarOpen(true)}
+            />
+            <InfoBanner />
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">Loading products...</span>
+              </div>
+            ) : error ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                <p className="text-sm text-destructive">{error}</p>
+                <button
+                  onClick={refetch}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md hover:bg-secondary transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Retry
+                </button>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <p className="text-lg font-medium text-foreground mb-1">No products found</p>
+                  <p className="text-sm">
+                    {shopifyProducts.length === 0
+                      ? "No products yet. Go to the Import tab to pull products from Shopify."
+                      : "Try adjusting your filters or search query."}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ProductTable
+                products={filteredProducts}
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                changedCells={changedCells}
+                onCellChange={handleCellChange}
+                visibleColumns={visibleColumns}
+                showBefore={showBefore}
+                categories={categories}
+                getProductCategories={getProductCategories}
+                onAssignCategory={assignCategory}
+                onUnassignCategory={unassignCategory}
+                onCreateCategory={createCategory}
+              />
+            )}
+            <StatusBar
+              selectedCount={selectedIds.size}
+              stagedChanges={stagedChanges}
+              onBulkActions={() => setBulkModalOpen(true)}
+              onReviewApply={() => setReviewOpen(true)}
+              onDiscardAll={() => setChangedCells(new Map())}
+            />
+          </>
+        )}
+
+        {activeTab === "history" && <ChangeHistory />}
+
+        {activeTab === "review" && (
+          <ReviewPanel
+            open={true}
+            onClose={() => setActiveTab("editor")}
+            products={shopifyProducts}
+            changedCells={changedCells}
+            onApply={handleApply}
+            onDiscard={() => {
+              setChangedCells(new Map());
+              setActiveTab("editor");
+            }}
+          />
+        )}
+
+        {activeTab === "scheduled" && (
+          <ScheduledJobs
+            products={shopifyProducts}
+            categories={categories}
+            getProductsByCategory={getProductsByCategory}
+          />
+        )}
+        {activeTab === "import" && (
+          <ImportExport
+            products={shopifyProducts}
+            changedCells={changedCells}
+            stores={stores}
+            onImportComplete={refetch}
+            onPushComplete={() => {
+              setChangedCells(new Map());
+              setSelectedIds(new Set());
+            }}
+            importFromShopify={importFromShopify}
+            pushChangesToShopify={pushChangesToShopify}
+            connectStore={connectStore}
+            disconnectStore={disconnectStore}
+            onStoreConnected={refetchStores}
+          />
+        )}
+        {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
+      </>
+    );
+  }
 };
 
 export default Index;
