@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/data/mockProducts";
-import { ShopifyStore } from "@/hooks/useSupabaseProducts";
+import { ShopifyStore, ShopifyPushResult } from "@/hooks/useSupabaseProducts";
 import { toast } from "sonner";
 
 type SyncStatus = "idle" | "syncing" | "pushing" | "done" | "error";
@@ -29,7 +29,11 @@ interface ImportExportProps {
   importFromShopify: (storeId: string) => Promise<{ success: boolean; imported: number }>;
   pushChangesToShopify: (
     changedCells: Map<string, Record<string, unknown>>
-  ) => Promise<{ success: boolean; summary: { total: number; succeeded: number; failed: number } }>;
+  ) => Promise<{
+    success: boolean;
+    summary: { total: number; succeeded: number; failed: number };
+    results: ShopifyPushResult[];
+  }>;
   connectStore: (shopDomain: string) => Promise<string | null>;
   disconnectStore: (storeId: string) => Promise<void>;
   onStoreConnected?: () => void;
