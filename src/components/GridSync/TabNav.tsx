@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X, UserCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect, useRef } from "react";
 
-type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review";
+type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review" | "profile";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "editor", label: "Bulk Editor" },
