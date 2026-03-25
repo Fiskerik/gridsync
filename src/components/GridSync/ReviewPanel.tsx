@@ -64,7 +64,7 @@ export function ReviewPanel({ open, onClose, products, changedCells, onApply, on
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative ml-auto w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative ml-auto w-full max-w-full md:max-w-lg bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4 border-b border-border">
           <div className="flex items-center justify-between">

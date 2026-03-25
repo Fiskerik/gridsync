@@ -1,5 +1,4 @@
-import { Search, SlidersHorizontal, Columns3, ChevronDown, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { Search, Columns3, ChevronDown, Eye, EyeOff, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +34,7 @@ interface EditorToolbarProps {
   showBefore: boolean;
   onShowBeforeChange: (v: boolean) => void;
   hasChanges: boolean;
+  onOpenFilters?: () => void;
 }
 
 export function EditorToolbar({
@@ -46,6 +46,7 @@ export function EditorToolbar({
   showBefore,
   onShowBeforeChange,
   hasChanges,
+  onOpenFilters,
 }: EditorToolbarProps) {
   const toggleColumn = (key: ColumnKey) => {
     if (visibleColumns.includes(key)) {
@@ -56,8 +57,8 @@ export function EditorToolbar({
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
-      <div className="relative flex-1 max-w-xs">
+    <div className="flex flex-wrap items-center gap-2 px-3 md:px-4 py-2 md:py-2.5 border-b border-border">
+      <div className="relative flex-1 min-w-[140px] max-w-full md:max-w-xs">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
@@ -67,46 +68,53 @@ export function EditorToolbar({
           className="w-full pl-8 pr-3 py-1.5 text-sm bg-card border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
-      {hasChanges && (
-        <button
-          onClick={() => onShowBeforeChange(!showBefore)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-md transition-colors ${
-            showBefore
-              ? "border-changed bg-changed-background text-changed"
-              : "border-input text-foreground hover:bg-secondary"
-          }`}
-        >
-          {showBefore ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          {showBefore ? "Before" : "After"}
-        </button>
-      )}
-      <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
-        <SlidersHorizontal className="w-3.5 h-3.5" />
-        Filter
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
-            <Columns3 className="w-3.5 h-3.5" />
-            Columns
-            <span className="text-muted-foreground">{visibleColumns.length} visible</span>
-            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+      <div className="flex items-center gap-1.5">
+        {onOpenFilters && (
+          <button
+            onClick={onOpenFilters}
+            className="md:hidden flex items-center gap-1 px-2 py-1.5 text-xs border border-input rounded-md text-foreground hover:bg-secondary transition-colors"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filters
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          {ALL_COLUMNS.map((col) => (
-            <DropdownMenuCheckboxItem
-              key={col.key}
-              checked={visibleColumns.includes(col.key)}
-              onCheckedChange={() => toggleColumn(col.key)}
-            >
-              {col.label}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <span className="ml-auto text-xs text-muted-foreground">
-        Showing {productCount} products
+        )}
+        {hasChanges && (
+          <button
+            onClick={() => onShowBeforeChange(!showBefore)}
+            className={`flex items-center gap-1 px-2 md:px-3 py-1.5 text-xs md:text-sm border rounded-md transition-colors ${
+              showBefore
+                ? "border-changed bg-changed-background text-changed"
+                : "border-input text-foreground hover:bg-secondary"
+            }`}
+          >
+            {showBefore ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{showBefore ? "Before" : "After"}</span>
+          </button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-1 px-2 md:px-3 py-1.5 text-xs md:text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
+              <Columns3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Columns</span>
+              <span className="text-muted-foreground text-xs">{visibleColumns.length}</span>
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {ALL_COLUMNS.map((col) => (
+              <DropdownMenuCheckboxItem
+                key={col.key}
+                checked={visibleColumns.includes(col.key)}
+                onCheckedChange={() => toggleColumn(col.key)}
+              >
+                {col.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <span className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+        {productCount} products
       </span>
     </div>
   );

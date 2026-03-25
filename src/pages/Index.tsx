@@ -65,6 +65,7 @@ const Index = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
   const [showBefore, setShowBefore] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyAdvancedFilters);
 
   const filterOptions = useMemo(() => {
@@ -260,6 +261,8 @@ const Index = () => {
           stores={stores}
           selectedStoreIds={selectedStoreIds}
           onSelectedStoreIdsChange={setSelectedStoreIds}
+          mobileOpen={mobileSidebarOpen}
+          onMobileClose={() => setMobileSidebarOpen(false)}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           {activeTab === "editor" && (
@@ -273,6 +276,7 @@ const Index = () => {
                 showBefore={showBefore}
                 onShowBeforeChange={setShowBefore}
                 hasChanges={changedCells.size > 0}
+                onOpenFilters={() => setMobileSidebarOpen(true)}
               />
               <InfoBanner />
               {loading ? (
