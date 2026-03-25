@@ -228,6 +228,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
     setName("");
     setActionType("price_percent");
     setPercent("10");
+    setFixedAmount("5");
     setFixedPrice("0");
     setField("price");
     setFindText("");
