@@ -42,9 +42,15 @@ const emptyAdvancedFilters: AdvancedFilters = {
 const Index = () => {
   const {
     products: shopifyProducts,
+    stores,
+    selectedStoreIds,
+    setSelectedStoreIds,
     loading,
     error,
     refetch,
+    refetchStores,
+    connectStore,
+    disconnectStore,
     importFromShopify,
     pushChangesToShopify,
   } = useSupabaseProducts();
