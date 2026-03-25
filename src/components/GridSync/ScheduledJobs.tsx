@@ -786,13 +786,23 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  {(job.status === "pending" || job.status === "cancelled") && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleEditJob(job)} title="Edit job">
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  )}
                   {job.status === "pending" && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleCancel(job.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-accent" onClick={() => handleCancel(job.id)} title="Pause job">
                       <Pause className="w-4 h-4" />
                     </Button>
                   )}
+                  {job.status === "cancelled" && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-success" onClick={() => handleResume(job.id)} title="Resume job">
+                      <Play className="w-4 h-4" />
+                    </Button>
+                  )}
                   {(job.status === "completed" || job.status === "cancelled" || job.status === "failed") && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(job.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(job.id)} title="Delete job">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
