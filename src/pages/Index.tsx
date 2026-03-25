@@ -11,6 +11,8 @@ import { ReviewPanel } from "@/components/GridSync/ReviewPanel";
 import { ChangeHistory } from "@/components/GridSync/ChangeHistory";
 import { ApplyProgress } from "@/components/GridSync/ApplyProgress";
 import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
+import { ImportExport } from "@/components/GridSync/ImportExport";
+import { ExportCsv } from "@/components/GridSync/ExportCsv";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("editor");
