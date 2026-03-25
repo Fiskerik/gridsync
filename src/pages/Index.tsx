@@ -195,8 +195,8 @@ const Index = () => {
           edit_history_id: historyEntry.id,
           product_id: productId,
           field,
-          old_value: product ? (product as unknown as Record<string, unknown>)[field] ?? null : null,
-          new_value: newValue ?? null,
+          old_value: (product ? (product as unknown as Record<string, unknown>)[field] ?? null : null) as Json,
+          new_value: (newValue ?? null) as Json,
         }));
       });
 
