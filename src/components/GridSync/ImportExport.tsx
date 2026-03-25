@@ -73,6 +73,13 @@ export function ImportExport({
   const [newShopDomain, setNewShopDomain] = useState("");
   const [connecting, setConnecting] = useState(false);
 
+  // Reset sync status when changed cells change so push button isn't stuck
+  useEffect(() => {
+    if (syncStatus === "done" || syncStatus === "error") {
+      setSyncStatus("idle");
+    }
+  }, [changedCells]);
+
   const handleConnectStore = useCallback(async () => {
     if (!newShopDomain.trim()) {
       toast.error("Please enter a shop domain");
