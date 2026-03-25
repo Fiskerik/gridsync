@@ -460,7 +460,7 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
         {/* Create Form */}
         {creating && (
           <div className="border border-border rounded-lg bg-card p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-foreground">New Scheduled Job</h3>
+            <h3 className="text-sm font-semibold text-foreground">{editingJob ? "Edit Scheduled Job" : "New Scheduled Job"}</h3>
 
             {/* Name */}
             <div>
