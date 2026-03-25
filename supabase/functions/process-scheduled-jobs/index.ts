@@ -6,6 +6,65 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface ValidationIssue {
+  productId: string;
+  field: string;
+  message: string;
+}
+
+function validateProductUpdate(
+  product: Record<string, unknown>,
+  updates: Record<string, unknown>
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const productId = String(product.id);
+
+  if (updates.price !== undefined) {
+    const price = Number(updates.price);
+    if (Number.isNaN(price) || price < 0) {
+      issues.push({ productId, field: "price", message: `Price would become ${updates.price} (invalid or negative)` });
+    }
+  }
+
+  if (updates.compare_at_price !== undefined && updates.compare_at_price !== null) {
+    const cap = Number(updates.compare_at_price);
+    if (Number.isNaN(cap) || cap < 0) {
+      issues.push({ productId, field: "compare_at_price", message: `Compare-at price would become ${updates.compare_at_price} (invalid or negative)` });
+    }
+    const effectivePrice = updates.price !== undefined ? Number(updates.price) : Number(product.price);
+    if (!Number.isNaN(cap) && !Number.isNaN(effectivePrice) && effectivePrice >= cap && cap > 0) {
+      issues.push({ productId, field: "compare_at_price", message: `Price (${effectivePrice}) >= compare-at price (${cap}), discount won't show` });
+    }
+  }
+
+  if (updates.seo_title !== undefined) {
+    const len = String(updates.seo_title).length;
+    if (len > 70) {
+      issues.push({ productId, field: "seo_title", message: `SEO title is ${len} chars (max recommended: 60)` });
+    }
+  }
+
+  if (updates.seo_description !== undefined) {
+    const len = String(updates.seo_description).length;
+    if (len > 320) {
+      issues.push({ productId, field: "seo_description", message: `SEO description is ${len} chars (max recommended: 160)` });
+    }
+  }
+
+  if (updates.title !== undefined && String(updates.title).trim() === "") {
+    issues.push({ productId, field: "title", message: "Title would become empty" });
+  }
+
+  if (updates.inventory !== undefined) {
+    const inv = Number(updates.inventory);
+    if (Number.isNaN(inv) || inv < 0) {
+      issues.push({ productId, field: "inventory", message: `Inventory would become ${updates.inventory} (invalid or negative)` });
+    }
+  }
+
+  return issues;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,6 +93,7 @@ Deno.serve(async (req) => {
     }
 
     let processed = 0;
+    const allValidationIssues: { jobId: string; issues: ValidationIssue[] }[] = [];
 
     for (const job of jobs) {
       // Mark as running
@@ -54,6 +114,8 @@ Deno.serve(async (req) => {
           .eq("user_id", job.user_id);
 
         if (prodError) throw prodError;
+
+        const jobIssues: ValidationIssue[] = [];
 
         for (const product of products || []) {
           const updates: Record<string, unknown> = {};
@@ -88,12 +150,33 @@ Deno.serve(async (req) => {
           }
 
           if (Object.keys(updates).length > 0) {
+            // Validate before applying
+            const issues = validateProductUpdate(product as Record<string, unknown>, updates);
+            if (issues.length > 0) {
+              jobIssues.push(...issues);
+              // Skip products with blocking issues (negative price, empty title)
+              const hasBlockingIssue = issues.some(
+                (i) =>
+                  i.message.includes("negative") ||
+                  i.message.includes("invalid") ||
+                  i.message.includes("empty")
+              );
+              if (hasBlockingIssue) {
+                console.warn(`Skipping product ${product.id} due to validation: ${issues.map((i) => i.message).join("; ")}`);
+                continue;
+              }
+            }
+
             updates.updated_at = new Date().toISOString();
             await supabase
               .from("products")
               .update(updates)
               .eq("id", product.id);
           }
+        }
+
+        if (jobIssues.length > 0) {
+          allValidationIssues.push({ jobId: job.id, issues: jobIssues });
         }
 
         // Mark completed
@@ -113,7 +196,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: "Jobs processed", processed }),
+      JSON.stringify({ message: "Jobs processed", processed, validationIssues: allValidationIssues }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

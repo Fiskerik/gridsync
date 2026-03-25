@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
       return new Response("Shopify OAuth credentials not configured", { status: 500 });
     }
 
+    // Exchange code for offline access token
     const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,6 +54,7 @@ Deno.serve(async (req) => {
     const accessToken = tokenData.access_token;
     const scopes = tokenData.scope || "";
 
+    // Fetch shop info
     const shopInfoRes = await fetch(`https://${shop}/admin/api/2025-07/shop.json`, {
       headers: {
         "X-Shopify-Access-Token": accessToken,
@@ -70,23 +72,46 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    const { error: upsertError } = await supabaseClient
+    // Check if store already exists for this user (reinstall scenario)
+    const { data: existingStore } = await supabaseClient
       .from("shopify_stores")
-      .upsert(
-        {
+      .select("id")
+      .eq("user_id", stateData.userId)
+      .eq("shop_domain", shop)
+      .maybeSingle();
+
+    if (existingStore) {
+      // Update existing store with fresh token and scopes
+      const { error: updateError } = await supabaseClient
+        .from("shopify_stores")
+        .update({
+          access_token: accessToken,
+          scopes,
+          store_name: storeName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingStore.id);
+
+      if (updateError) {
+        console.error("Failed to update store:", updateError);
+        return new Response(`Failed to update store credentials: ${updateError.message}`, { status: 500 });
+      }
+    } else {
+      // Insert new store
+      const { error: insertError } = await supabaseClient
+        .from("shopify_stores")
+        .insert({
           user_id: stateData.userId,
           shop_domain: shop,
           store_name: storeName,
           access_token: accessToken,
           scopes,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,shop_domain" }
-      );
+        });
 
-    if (upsertError) {
-      console.error("Failed to save store:", upsertError);
-      return new Response(`Failed to save store credentials: ${upsertError.message}`, { status: 500 });
+      if (insertError) {
+        console.error("Failed to save store:", insertError);
+        return new Response(`Failed to save store credentials: ${insertError.message}`, { status: 500 });
+      }
     }
 
     const escapedStoreName = storeName.replace(/'/g, "\\'").replace(/</g, "&lt;");
