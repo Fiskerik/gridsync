@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Store Connected — GridSync</title>
+  <title>Store Connected — SyncroNice</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
     </div>
     <h2>Store Connected!</h2>
     <div class="shop-name">${escapedStoreName}</div>
-    <p class="subtitle">Your Shopify store has been successfully linked to GridSync. You can now import and manage your products.</p>
+    <p class="subtitle">Your Shopify store has been successfully linked to SyncroNice. You can now import and manage your products.</p>
     <p class="redirect-note"><span class="spinner"></span>Redirecting back to the app…</p>
   </div>
   <script>
