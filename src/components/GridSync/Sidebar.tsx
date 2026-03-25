@@ -1,4 +1,4 @@
-import { Zap, ChevronDown, X, Store, Check } from "lucide-react";
+import { Zap, X, Store, Check, Filter } from "lucide-react";
 import { AdvancedFilters } from "@/pages/Index";
 import { ShopifyStore } from "@/hooks/useSupabaseProducts";
 
@@ -21,6 +21,8 @@ interface SidebarProps {
   stores: ShopifyStore[];
   selectedStoreIds: Set<string>;
   onSelectedStoreIdsChange: (ids: Set<string>) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 const smartSelects = [
@@ -44,6 +46,8 @@ export function Sidebar({
   stores,
   selectedStoreIds,
   onSelectedStoreIdsChange,
+  mobileOpen = false,
+  onMobileClose,
 }: SidebarProps) {
   const counts: Record<string, number> = {
     all: totalProducts,
@@ -65,9 +69,14 @@ export function Sidebar({
     });
   };
 
+  const handleFilterChange = (id: string) => {
+    onFilterChange(id);
+    onMobileClose?.();
+  };
+
   const SidebarButton = ({ id, label, count, dot }: { id: string; label: string; count?: number; dot?: boolean }) => (
     <button
-      onClick={() => onFilterChange(id)}
+      onClick={() => handleFilterChange(id)}
       className={`w-full flex items-center justify-between px-4 py-1.5 text-sm transition-colors ${
         activeFilter === id
           ? "bg-sidebar-accent text-foreground font-semibold"
@@ -82,8 +91,8 @@ export function Sidebar({
     </button>
   );
 
-  return (
-    <aside className="w-56 shrink-0 border-r border-border bg-sidebar py-4 flex flex-col gap-4 overflow-y-auto">
+  const sidebarContent = (
+    <>
       <div>
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-4 mb-1.5">
           Products
@@ -277,6 +286,34 @@ export function Sidebar({
           </div>
         )}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-56 shrink-0 border-r border-border bg-sidebar py-4 flex-col gap-4 overflow-y-auto">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={onMobileClose} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar py-4 flex flex-col gap-4 overflow-y-auto shadow-xl border-r border-border">
+            <div className="flex items-center justify-between px-4 pb-2 border-b border-border">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Filters
+              </h2>
+              <button onClick={onMobileClose} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
