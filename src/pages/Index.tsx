@@ -13,8 +13,9 @@ import { ApplyProgress } from "@/components/GridSync/ApplyProgress";
 import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
 import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
-import { useShopifyProducts } from "@/hooks/useShopifyProducts";
+import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
 import { Loader2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 export interface AdvancedFilters {
   vendor: string;
@@ -37,7 +38,14 @@ const emptyAdvancedFilters: AdvancedFilters = {
 };
 
 const Index = () => {
-  const { products: shopifyProducts, loading, error, refetch } = useShopifyProducts();
+  const {
+    products: shopifyProducts,
+    loading,
+    error,
+    refetch,
+    importFromShopify,
+    pushChangesToShopify,
+  } = useSupabaseProducts();
 
   const [activeTab, setActiveTab] = useState<TabId>("editor");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -51,7 +59,6 @@ const Index = () => {
   const [showBefore, setShowBefore] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyAdvancedFilters);
 
-  // Derive unique values for filter dropdowns
   const filterOptions = useMemo(() => {
     const vendors = [...new Set(shopifyProducts.map((p) => p.vendor).filter(Boolean))].sort();
     const types = [...new Set(shopifyProducts.map((p) => p.productType).filter(Boolean))].sort();
@@ -63,7 +70,6 @@ const Index = () => {
   const filteredProducts = useMemo(() => {
     let list = [...shopifyProducts];
 
-    // Sidebar filter
     if (activeFilter === "active") list = list.filter((p) => p.status === "active");
     else if (activeFilter === "draft") list = list.filter((p) => p.status === "draft");
     else if (activeFilter.startsWith("collection:")) {
@@ -81,7 +87,6 @@ const Index = () => {
       list = list.filter((p) => p.compareAtPrice !== null);
     }
 
-    // Advanced filters
     if (advancedFilters.vendor) list = list.filter((p) => p.vendor === advancedFilters.vendor);
     if (advancedFilters.productType) list = list.filter((p) => p.productType === advancedFilters.productType);
     if (advancedFilters.tag) list = list.filter((p) => p.tags.includes(advancedFilters.tag));
@@ -102,7 +107,6 @@ const Index = () => {
       list = list.filter((p) => new Date(p.createdAt) <= to);
     }
 
-    // Search
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -158,16 +162,28 @@ const Index = () => {
     [selectedIds, shopifyProducts]
   );
 
-  const handleApply = useCallback(() => {
+  const handleApply = useCallback(async () => {
     setReviewOpen(false);
     setApplyOpen(true);
   }, []);
 
-  const handleApplyComplete = useCallback(() => {
+  const handleApplyComplete = useCallback(async () => {
+    // Push changes to Shopify
+    try {
+      const result = await pushChangesToShopify(changedCells);
+      if (result.summary.failed > 0) {
+        toast.warning(`${result.summary.succeeded} updated, ${result.summary.failed} failed`);
+      } else {
+        toast.success(`${result.summary.succeeded} products updated on Shopify`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Push failed";
+      toast.error("Failed to push to Shopify", { description: msg });
+    }
     setApplyOpen(false);
     setChangedCells(new Map());
     setSelectedIds(new Set());
-  }, []);
+  }, [changedCells, pushChangesToShopify]);
 
   const activeCount = shopifyProducts.filter((p) => p.status === "active").length;
   const draftCount = shopifyProducts.filter((p) => p.status === "draft").length;
@@ -206,7 +222,7 @@ const Index = () => {
               {loading ? (
                 <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">Loading products from Shopify...</span>
+                  <span className="text-sm">Loading products...</span>
                 </div>
               ) : error ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -225,7 +241,7 @@ const Index = () => {
                     <p className="text-lg font-medium text-foreground mb-1">No products found</p>
                     <p className="text-sm">
                       {shopifyProducts.length === 0
-                        ? "Your Shopify store has no products yet. Add products in your Shopify admin."
+                        ? "No products yet. Go to the Import tab to pull products from Shopify."
                         : "Try adjusting your filters or search query."}
                     </p>
                   </div>
@@ -268,7 +284,19 @@ const Index = () => {
           )}
 
           {activeTab === "scheduled" && <ScheduledJobs />}
-          {activeTab === "import" && <ImportExport />}
+          {activeTab === "import" && (
+            <ImportExport
+              products={shopifyProducts}
+              changedCells={changedCells}
+              onImportComplete={refetch}
+              onPushComplete={() => {
+                setChangedCells(new Map());
+                setSelectedIds(new Set());
+              }}
+              importFromShopify={importFromShopify}
+              pushChangesToShopify={pushChangesToShopify}
+            />
+          )}
           {activeTab === "export-csv" && <ExportCsv />}
         </div>
       </div>
