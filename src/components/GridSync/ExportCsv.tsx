@@ -3,7 +3,7 @@ import { Download, FileSpreadsheet, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { mockProducts, Product } from "@/data/mockProducts";
+import { Product } from "@/data/mockProducts";
 
 interface FieldOption {
   key: keyof Product;
@@ -30,7 +30,11 @@ const FIELD_OPTIONS: FieldOption[] = [
   { key: "updatedAt", label: "Updated At", default: false },
 ];
 
-export function ExportCsv() {
+interface ExportCsvProps {
+  products: Product[];
+}
+
+export function ExportCsv({ products }: ExportCsvProps) {
   const [selectedFields, setSelectedFields] = useState<Set<keyof Product>>(
     new Set(FIELD_OPTIONS.filter((f) => f.default).map((f) => f.key))
   );
@@ -48,7 +52,7 @@ export function ExportCsv() {
   const handleExport = useCallback(() => {
     const fields = FIELD_OPTIONS.filter((f) => selectedFields.has(f.key));
     const header = fields.map((f) => f.label).join(",");
-    const rows = mockProducts.map((p) =>
+    const rows = products.map((p) =>
       fields.map((f) => {
         const val = p[f.key];
         if (Array.isArray(val)) return `"${val.join("; ")}"`;
@@ -67,7 +71,7 @@ export function ExportCsv() {
     URL.revokeObjectURL(url);
     setExported(true);
     setTimeout(() => setExported(false), 2000);
-  }, [selectedFields]);
+  }, [selectedFields, products]);
 
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-2xl mx-auto">
@@ -109,15 +113,15 @@ export function ExportCsv() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-foreground">
-              Ready to export {mockProducts.length} products
+              Ready to export {products.length} products
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {selectedFields.size} fields × {mockProducts.length} products
+              {selectedFields.size} fields × {products.length} products
             </p>
           </div>
           <Button
             onClick={handleExport}
-            disabled={selectedFields.size === 0}
+            disabled={selectedFields.size === 0 || products.length === 0}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {exported ? (
