@@ -123,6 +123,9 @@ const Index = () => {
                 onSearchChange={setSearchQuery}
                 visibleColumns={visibleColumns}
                 onColumnsChange={setVisibleColumns}
+                showBefore={showBefore}
+                onShowBeforeChange={setShowBefore}
+                hasChanges={changedCells.size > 0}
               />
               <InfoBanner />
               <ProductTable
@@ -132,6 +135,7 @@ const Index = () => {
                 changedCells={changedCells}
                 onCellChange={handleCellChange}
                 visibleColumns={visibleColumns}
+                showBefore={showBefore}
               />
               <StatusBar
                 selectedCount={selectedIds.size}
