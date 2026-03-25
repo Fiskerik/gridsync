@@ -12,6 +12,7 @@ import { ReviewPanel } from "@/components/GridSync/ReviewPanel";
 import { ChangeHistory } from "@/components/GridSync/ChangeHistory";
 import { ApplyProgress } from "@/components/GridSync/ApplyProgress";
 import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
+import { ProfilePage } from "@/components/GridSync/ProfilePage";
 import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
