@@ -246,7 +246,18 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
       .update({ status: "cancelled" })
       .eq("id", jobId);
     if (!error) {
-      toast.success("Job cancelled.");
+      toast.success("Job paused.");
+      fetchJobs();
+    }
+  };
+
+  const handleResume = async (jobId: string) => {
+    const { error } = await supabase
+      .from("scheduled_jobs")
+      .update({ status: "pending" })
+      .eq("id", jobId);
+    if (!error) {
+      toast.success("Job resumed.");
       fetchJobs();
     }
   };
@@ -260,6 +271,73 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
       toast.success("Job deleted.");
       fetchJobs();
     }
+  };
+
+  const [editingJob, setEditingJob] = useState<ScheduledJob | null>(null);
+
+  const handleEditJob = (job: ScheduledJob) => {
+    setEditingJob(job);
+    setName(job.name);
+    setActionType(job.action_type);
+    const params = job.action_params as Record<string, string>;
+    if (job.action_type === "price_percent") {
+      setPercent(params.percent || "10");
+      setField(params.field || "price");
+    } else if (job.action_type === "price_set") {
+      setFixedPrice(params.price || "0");
+      setField(params.field || "price");
+    } else if (job.action_type === "find_replace") {
+      setField(params.field || "title");
+      setFindText(params.find || "");
+      setReplaceText(params.replace || "");
+    } else if (job.action_type === "set_tags") {
+      setTags(params.tags || "");
+      setTagAction(params.action || "add");
+    }
+    setSelectedProducts(new Set(job.product_ids));
+    setDate(new Date(job.scheduled_at));
+    const d = new Date(job.scheduled_at);
+    setTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+    setCreating(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingJob || !date || selectedProducts.size === 0 || !name.trim()) {
+      toast.error("Please fill in name, select products, and pick a date.");
+      return;
+    }
+
+    const [hours, minutes] = time.split(":").map(Number);
+    const scheduledAt = new Date(date);
+    scheduledAt.setHours(hours, minutes, 0, 0);
+
+    let actionParams: Record<string, string> = {};
+    if (actionType === "price_percent") actionParams = { percent, field };
+    else if (actionType === "price_set") actionParams = { price: fixedPrice, field };
+    else if (actionType === "find_replace") actionParams = { field, find: findText, replace: replaceText };
+    else if (actionType === "set_tags") actionParams = { tags, action: tagAction };
+
+    const { error } = await supabase
+      .from("scheduled_jobs")
+      .update({
+        name: name.trim(),
+        action_type: actionType,
+        action_params: actionParams,
+        product_ids: Array.from(selectedProducts),
+        scheduled_at: scheduledAt.toISOString(),
+      })
+      .eq("id", editingJob.id);
+
+    if (error) {
+      toast.error("Failed to update job.");
+      return;
+    }
+
+    toast.success("Job updated!");
+    setCreating(false);
+    setEditingJob(null);
+    resetForm();
+    fetchJobs();
   };
 
   const toggleProduct = (id: string) => {

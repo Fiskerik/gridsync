@@ -153,6 +153,17 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
               </Badge>
             )}
           </button>
+          <button
+            onClick={() => handleTabChange("profile")}
+            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
+              activeTab === "profile"
+                ? "bg-primary/10 text-foreground font-medium"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <UserCircle className="w-3.5 h-3.5" />
+            Profile
+          </button>
           <div className="border-t border-border mt-1 pt-1">
             <button
               onClick={() => { setMobileMenuOpen(false); signOut(); }}
