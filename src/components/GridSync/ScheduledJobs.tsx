@@ -32,6 +32,7 @@ interface ScheduledJob {
 
 const ACTION_LABELS: Record<string, string> = {
   price_percent: "Adjust price by %",
+  price_fixed: "Adjust price by fixed amount",
   price_set: "Set fixed price",
   find_replace: "Find & replace text",
   set_tags: "Update tags",
