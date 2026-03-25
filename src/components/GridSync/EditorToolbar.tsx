@@ -1,12 +1,54 @@
-import { Search, SlidersHorizontal, Columns3 } from "lucide-react";
+import { Search, SlidersHorizontal, Columns3, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export type ColumnKey = "title" | "sku" | "price" | "compareAtPrice" | "inventory" | "status" | "vendor" | "tags" | "seoTitle" | "description" | "productType" | "variants";
+
+export const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: "title", label: "Title" },
+  { key: "description", label: "Description" },
+  { key: "sku", label: "SKU" },
+  { key: "price", label: "Price" },
+  { key: "compareAtPrice", label: "Compare at" },
+  { key: "inventory", label: "Inventory" },
+  { key: "status", label: "Status" },
+  { key: "vendor", label: "Vendor" },
+  { key: "tags", label: "Tags" },
+  { key: "seoTitle", label: "SEO Title" },
+  { key: "productType", label: "Type" },
+  { key: "variants", label: "Variants" },
+];
+
+export const DEFAULT_VISIBLE: ColumnKey[] = ["title", "sku", "price", "compareAtPrice", "inventory", "status", "vendor"];
 
 interface EditorToolbarProps {
   productCount: number;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  visibleColumns: ColumnKey[];
+  onColumnsChange: (cols: ColumnKey[]) => void;
 }
 
-export function EditorToolbar({ productCount, searchQuery, onSearchChange }: EditorToolbarProps) {
+export function EditorToolbar({
+  productCount,
+  searchQuery,
+  onSearchChange,
+  visibleColumns,
+  onColumnsChange,
+}: EditorToolbarProps) {
+  const toggleColumn = (key: ColumnKey) => {
+    if (visibleColumns.includes(key)) {
+      if (visibleColumns.length > 1) onColumnsChange(visibleColumns.filter((c) => c !== key));
+    } else {
+      onColumnsChange([...visibleColumns, key]);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
       <div className="relative flex-1 max-w-xs">
@@ -15,7 +57,7 @@ export function EditorToolbar({ productCount, searchQuery, onSearchChange }: Edi
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search..."
+          placeholder="Search products..."
           className="w-full pl-8 pr-3 py-1.5 text-sm bg-card border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -23,11 +65,27 @@ export function EditorToolbar({ productCount, searchQuery, onSearchChange }: Edi
         <SlidersHorizontal className="w-3.5 h-3.5" />
         Filter
       </button>
-      <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
-        <Columns3 className="w-3.5 h-3.5" />
-        Columns
-        <span className="text-muted-foreground">7 visible</span>
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
+            <Columns3 className="w-3.5 h-3.5" />
+            Columns
+            <span className="text-muted-foreground">{visibleColumns.length} visible</span>
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {ALL_COLUMNS.map((col) => (
+            <DropdownMenuCheckboxItem
+              key={col.key}
+              checked={visibleColumns.includes(col.key)}
+              onCheckedChange={() => toggleColumn(col.key)}
+            >
+              {col.label}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <span className="ml-auto text-xs text-muted-foreground">
         Showing {productCount} products
       </span>
