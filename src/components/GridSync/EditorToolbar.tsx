@@ -69,6 +69,15 @@ export function EditorToolbar({
         />
       </div>
       <div className="flex items-center gap-1.5">
+        {onOpenFilters && (
+          <button
+            onClick={onOpenFilters}
+            className="md:hidden flex items-center gap-1 px-2 py-1.5 text-xs border border-input rounded-md text-foreground hover:bg-secondary transition-colors"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filters
+          </button>
+        )}
         {hasChanges && (
           <button
             onClick={() => onShowBeforeChange(!showBefore)}
