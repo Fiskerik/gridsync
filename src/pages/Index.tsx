@@ -159,6 +159,14 @@ const Index = () => {
     });
   }, []);
 
+  const handleAutoFixChange = useCallback((productId: string, field: string, value: unknown) => {
+    setChangedCells((prev) => {
+      const next = new Map(prev);
+      next.set(productId, { ...(next.get(productId) || {}), [field]: value });
+      return next;
+    });
+  }, []);
+
   const handleBulkAction = useCallback(
     (action: string, params: Record<string, string>) => {
       const ids = Array.from(selectedIds);
