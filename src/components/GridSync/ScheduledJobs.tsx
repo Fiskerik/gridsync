@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Plus, Trash2, Pause, CheckCircle2, AlertCircle, Loader2, Columns3, ChevronDown, ArrowUpDown, Search, Filter } from "lucide-react";
+import { CalendarIcon, Clock, Plus, Trash2, Pause, Play, Pencil, CheckCircle2, AlertCircle, Loader2, Columns3, ChevronDown, ArrowUpDown, Search, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Product } from "@/data/mockProducts";
 import { Category } from "@/hooks/useCategories";
