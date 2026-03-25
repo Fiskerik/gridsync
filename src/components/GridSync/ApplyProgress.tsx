@@ -1,21 +1,31 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ApplyProgressProps {
   open: boolean;
   totalChanges: number;
-  onComplete: () => void;
+  onComplete: () => Promise<void> | void;
 }
 
 export function ApplyProgress({ open, totalChanges, onComplete }: ApplyProgressProps) {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<"validating" | "applying" | "done">("validating");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) { setProgress(0); setPhase("validating"); return; }
+    if (!open) {
+      setProgress(0);
+      setPhase("validating");
+      setSubmitting(false);
+      return;
+    }
 
-    const t1 = setTimeout(() => { setPhase("applying"); setProgress(10); }, 600);
+    const t1 = setTimeout(() => {
+      setPhase("applying");
+      setProgress(10);
+    }, 600);
+
     const interval = setInterval(() => {
       setProgress((p) => {
         if (p >= 100) {
@@ -27,8 +37,11 @@ export function ApplyProgress({ open, totalChanges, onComplete }: ApplyProgressP
       });
     }, 300);
 
-    return () => { clearTimeout(t1); clearInterval(interval); };
-  }, [open, onComplete]);
+    return () => {
+      clearTimeout(t1);
+      clearInterval(interval);
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -40,9 +53,20 @@ export function ApplyProgress({ open, totalChanges, onComplete }: ApplyProgressP
           <>
             <CheckCircle2 className="w-12 h-12 text-success mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-foreground">Changes applied!</h3>
-            <p className="text-sm text-muted-foreground mt-1">{totalChanges} fields updated successfully. A snapshot has been saved.</p>
-            <Button onClick={onComplete} className="mt-4">
-              OK
+            <p className="text-sm text-muted-foreground mt-1">
+              {totalChanges} fields updated successfully. A snapshot has been saved.
+            </p>
+            <Button
+              onClick={async () => {
+                if (submitting) return;
+                setSubmitting(true);
+                await onComplete();
+              }}
+              className="mt-4"
+              disabled={submitting}
+            >
+              {submitting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
+              {submitting ? "Finalizing..." : "OK"}
             </Button>
           </>
         ) : (
