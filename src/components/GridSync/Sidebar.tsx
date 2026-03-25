@@ -6,6 +6,7 @@ import { Category } from "@/hooks/useCategories";
 interface SidebarProps {
   activeFilter: string;
   onFilterChange: (filter: string) => void;
+  onSwitchToEditor?: () => void;
   totalProducts: number;
   activeCount: number;
   draftCount: number;
