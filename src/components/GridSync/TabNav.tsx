@@ -108,7 +108,7 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
             className="hidden md:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             title="Sign out"
           >
-            <Icon source={LogOutIcon} />
+            <Icon source={ExitIcon} />
             <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
