@@ -344,6 +344,7 @@ const Index = () => {
           onMobileClose={() => setMobileSidebarOpen(false)}
           categories={categories}
           getProductsByCategory={getProductsByCategory}
+          onSwitchToEditor={() => setActiveTab("editor")}
         />
 
         {/* Desktop: resizable panels */}
