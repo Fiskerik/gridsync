@@ -1,9 +1,10 @@
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review";
 
-const tabs: { id: TabId; label: string; badge?: string }[] = [
+const tabs: { id: TabId; label: string }[] = [
   { id: "editor", label: "Bulk Editor" },
   { id: "history", label: "Change History" },
   { id: "scheduled", label: "Scheduled Jobs" },
@@ -18,6 +19,8 @@ interface TabNavProps {
 }
 
 export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="flex items-center gap-1 border-b border-border px-4 bg-card">
       <div className="flex items-center gap-1.5 mr-4 py-2.5">
@@ -52,6 +55,20 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
           </Badge>
         )}
       </button>
+
+      <div className="ml-auto flex items-center gap-3 py-2.5">
+        {user && (
+          <span className="text-xs text-muted-foreground truncate max-w-[160px]">{user.email}</span>
+        )}
+        <button
+          onClick={signOut}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          title="Sign out"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
