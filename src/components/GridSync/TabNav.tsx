@@ -1,8 +1,9 @@
-import { Badge as PolarisBadge, Tabs, Button as PolarisButton, Text, InlineStack, Icon } from "@shopify/polaris";
+import { InlineStack, Icon } from "@shopify/polaris";
 import { ExitIcon, PersonIcon } from "@shopify/polaris-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
+import syncroniceLogo from "@/assets/syncronice-logo.jpg";
 
 type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review" | "profile";
 
