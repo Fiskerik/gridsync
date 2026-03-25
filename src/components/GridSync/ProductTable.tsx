@@ -11,6 +11,7 @@ interface ProductTableProps {
   changedCells: Map<string, Record<string, unknown>>;
   onCellChange: (productId: string, field: string, value: unknown) => void;
   visibleColumns: ColumnKey[];
+  showBefore?: boolean;
 }
 
 function InventoryBadge({ count }: { count: number }) {
@@ -103,6 +104,7 @@ export function ProductTable({
   changedCells,
   onCellChange,
   visibleColumns,
+  showBefore = false,
 }: ProductTableProps) {
   const allSelected = products.length > 0 && selectedIds.size === products.length;
 
@@ -119,48 +121,61 @@ export function ProductTable({
   const isChanged = (id: string, field: string) =>
     changedCells.has(id) && field in (changedCells.get(id) || {});
 
+  const getDisplayValue = (p: Product, field: string) => {
+    if (showBefore) return (p as unknown as Record<string, unknown>)[field];
+    const changes = changedCells.get(p.id);
+    if (changes && field in changes) return changes[field];
+    return (p as unknown as Record<string, unknown>)[field];
+  };
+
   const renderCell = (p: Product, col: ColumnKey) => {
     switch (col) {
       case "title":
         return (
-          <EditableCell value={p.title} isChanged={isChanged(p.id, "title")}
+          <EditableCell value={String(getDisplayValue(p, "title") || "")} isChanged={!showBefore && isChanged(p.id, "title")}
             onCommit={(v) => onCellChange(p.id, "title", v)} className="font-medium" />
         );
       case "description":
         return (
-          <EditableCell value={p.description} isChanged={isChanged(p.id, "description")}
+          <EditableCell value={String(getDisplayValue(p, "description") || "")} isChanged={!showBefore && isChanged(p.id, "description")}
             onCommit={(v) => onCellChange(p.id, "description", v)} />
         );
       case "sku":
         return <span className="text-muted-foreground font-mono text-xs">{p.sku}</span>;
-      case "price":
+      case "price": {
+        const price = Number(getDisplayValue(p, "price") || 0);
         return (
-          <EditableCell value={p.price.toFixed(2)} isChanged={isChanged(p.id, "price")}
+          <EditableCell value={price.toFixed(2)} isChanged={!showBefore && isChanged(p.id, "price")}
             onCommit={(v) => onCellChange(p.id, "price", parseFloat(v))} type="number" prefix="$" />
         );
-      case "compareAtPrice":
+      }
+      case "compareAtPrice": {
+        const cap = getDisplayValue(p, "compareAtPrice") as number | null;
         return (
-          <EditableCell value={p.compareAtPrice?.toFixed(2) || ""} isChanged={isChanged(p.id, "compareAtPrice")}
-            onCommit={(v) => onCellChange(p.id, "compareAtPrice", v ? parseFloat(v) : null)} type="number" prefix={p.compareAtPrice ? "$" : ""} />
+          <EditableCell value={cap?.toFixed(2) || ""} isChanged={!showBefore && isChanged(p.id, "compareAtPrice")}
+            onCommit={(v) => onCellChange(p.id, "compareAtPrice", v ? parseFloat(v) : null)} type="number" prefix={cap ? "$" : ""} />
         );
+      }
       case "inventory":
         return <InventoryBadge count={p.inventory} />;
       case "status":
         return <StatusBadge status={p.status} />;
       case "vendor":
         return <span className="text-muted-foreground text-xs truncate">{p.vendor}</span>;
-      case "tags":
+      case "tags": {
+        const tags = (showBefore ? p.tags : (getDisplayValue(p, "tags") as string[] || p.tags));
         return (
           <div className="flex flex-wrap gap-1">
-            {p.tags.slice(0, 3).map((t) => (
+            {(tags as string[]).slice(0, 3).map((t) => (
               <Badge key={t} variant="outline" className="text-[10px] px-1.5 py-0 font-normal">{t}</Badge>
             ))}
-            {p.tags.length > 3 && <span className="text-[10px] text-muted-foreground">+{p.tags.length - 3}</span>}
+            {(tags as string[]).length > 3 && <span className="text-[10px] text-muted-foreground">+{(tags as string[]).length - 3}</span>}
           </div>
         );
+      }
       case "seoTitle":
         return (
-          <EditableCell value={p.seoTitle} isChanged={isChanged(p.id, "seoTitle")}
+          <EditableCell value={String(getDisplayValue(p, "seoTitle") || "")} isChanged={!showBefore && isChanged(p.id, "seoTitle")}
             onCommit={(v) => onCellChange(p.id, "seoTitle", v)} />
         );
       case "productType":

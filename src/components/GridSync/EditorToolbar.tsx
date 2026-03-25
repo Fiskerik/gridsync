@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal, Columns3, ChevronDown } from "lucide-react";
+import { Search, SlidersHorizontal, Columns3, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -32,6 +32,9 @@ interface EditorToolbarProps {
   onSearchChange: (q: string) => void;
   visibleColumns: ColumnKey[];
   onColumnsChange: (cols: ColumnKey[]) => void;
+  showBefore: boolean;
+  onShowBeforeChange: (v: boolean) => void;
+  hasChanges: boolean;
 }
 
 export function EditorToolbar({
@@ -40,6 +43,9 @@ export function EditorToolbar({
   onSearchChange,
   visibleColumns,
   onColumnsChange,
+  showBefore,
+  onShowBeforeChange,
+  hasChanges,
 }: EditorToolbarProps) {
   const toggleColumn = (key: ColumnKey) => {
     if (visibleColumns.includes(key)) {
@@ -61,6 +67,19 @@ export function EditorToolbar({
           className="w-full pl-8 pr-3 py-1.5 text-sm bg-card border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
+      {hasChanges && (
+        <button
+          onClick={() => onShowBeforeChange(!showBefore)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-md transition-colors ${
+            showBefore
+              ? "border-changed bg-changed-background text-changed"
+              : "border-input text-foreground hover:bg-secondary"
+          }`}
+        >
+          {showBefore ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          {showBefore ? "Before" : "After"}
+        </button>
+      )}
       <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-input rounded-md text-foreground hover:bg-secondary transition-colors">
         <SlidersHorizontal className="w-3.5 h-3.5" />
         Filter

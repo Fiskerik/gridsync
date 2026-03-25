@@ -21,6 +21,7 @@ const Index = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
+  const [showBefore, setShowBefore] = useState(false);
 
   const filteredProducts = useMemo(() => {
     let list = [...mockProducts];
@@ -122,6 +123,9 @@ const Index = () => {
                 onSearchChange={setSearchQuery}
                 visibleColumns={visibleColumns}
                 onColumnsChange={setVisibleColumns}
+                showBefore={showBefore}
+                onShowBeforeChange={setShowBefore}
+                hasChanges={changedCells.size > 0}
               />
               <InfoBanner />
               <ProductTable
@@ -131,6 +135,7 @@ const Index = () => {
                 changedCells={changedCells}
                 onCellChange={handleCellChange}
                 visibleColumns={visibleColumns}
+                showBefore={showBefore}
               />
               <StatusBar
                 selectedCount={selectedIds.size}
