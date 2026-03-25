@@ -21,6 +21,7 @@ const Index = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
+  const [showBefore, setShowBefore] = useState(false);
 
   const filteredProducts = useMemo(() => {
     let list = [...mockProducts];
