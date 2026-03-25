@@ -746,8 +746,12 @@ export function ScheduledJobs({ products, categories = [], getProductsByCategory
 
             {/* Actions */}
             <div className="flex gap-2 pt-2">
-              <Button onClick={handleCreate} size="sm">Schedule Job</Button>
-              <Button onClick={() => { setCreating(false); resetForm(); }} variant="outline" size="sm">Cancel</Button>
+              {editingJob ? (
+                <Button onClick={handleSaveEdit} size="sm">Save Changes</Button>
+              ) : (
+                <Button onClick={handleCreate} size="sm">Schedule Job</Button>
+              )}
+              <Button onClick={() => { setCreating(false); setEditingJob(null); resetForm(); }} variant="outline" size="sm">Cancel</Button>
             </div>
           </div>
         )}
