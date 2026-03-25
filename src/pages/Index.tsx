@@ -202,7 +202,7 @@ const Index = () => {
       });
 
       if (changeRows.length > 0) {
-        await (await import("@/integrations/supabase/client")).supabase
+        await supabase
           .from("edit_history_changes")
           .insert(changeRows);
       }
