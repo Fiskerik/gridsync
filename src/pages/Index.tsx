@@ -257,6 +257,9 @@ const Index = () => {
           advancedFilters={advancedFilters}
           onAdvancedFiltersChange={setAdvancedFilters}
           filterOptions={filterOptions}
+          stores={stores}
+          selectedStoreIds={selectedStoreIds}
+          onSelectedStoreIdsChange={setSelectedStoreIds}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           {activeTab === "editor" && (
