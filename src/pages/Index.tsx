@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { Product } from "@/data/mockProducts";
+import type { Json } from "@/integrations/supabase/types";
 import { TabNav, TabId } from "@/components/GridSync/TabNav";
 import { Sidebar } from "@/components/GridSync/Sidebar";
 import { EditorToolbar, DEFAULT_VISIBLE, ColumnKey } from "@/components/GridSync/EditorToolbar";
@@ -14,6 +15,7 @@ import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
 import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -167,7 +169,52 @@ const Index = () => {
     setApplyOpen(true);
   }, []);
 
+  const saveEditHistory = useCallback(async (cells: Map<string, Record<string, unknown>>) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const allFields = new Set<string>();
+      cells.forEach((fields) => Object.keys(fields).forEach((f) => allFields.add(f)));
+
+      const { data: historyEntry, error: histErr } = await supabase
+        .from("edit_history")
+        .insert({
+          user_id: session.user.id,
+          description: `Edited ${cells.size} product${cells.size > 1 ? "s" : ""}`,
+          products_affected: cells.size,
+          fields_changed: Array.from(allFields),
+        })
+        .select("id")
+        .single();
+
+      if (histErr || !historyEntry) throw histErr;
+
+      const changeRows = Array.from(cells.entries()).flatMap(([productId, fields]) => {
+        const product = shopifyProducts.find((p) => p.id === productId);
+        return Object.entries(fields).map(([field, newValue]) => ({
+          edit_history_id: historyEntry.id,
+          product_id: productId,
+          field,
+          old_value: (product ? (product as unknown as Record<string, unknown>)[field] ?? null : null) as Json,
+          new_value: (newValue ?? null) as Json,
+        }));
+      });
+
+      if (changeRows.length > 0) {
+        await supabase
+          .from("edit_history_changes")
+          .insert(changeRows);
+      }
+    } catch (err) {
+      console.error("Failed to save edit history:", err);
+    }
+  }, [shopifyProducts]);
+
   const handleApplyComplete = useCallback(async () => {
+    // Save edit history
+    await saveEditHistory(changedCells);
+
     // Push changes to Shopify
     try {
       const result = await pushChangesToShopify(changedCells);
@@ -183,7 +230,7 @@ const Index = () => {
     setApplyOpen(false);
     setChangedCells(new Map());
     setSelectedIds(new Set());
-  }, [changedCells, pushChangesToShopify]);
+  }, [changedCells, pushChangesToShopify, saveEditHistory]);
 
   const activeCount = shopifyProducts.filter((p) => p.status === "active").length;
   const draftCount = shopifyProducts.filter((p) => p.status === "draft").length;
@@ -283,7 +330,7 @@ const Index = () => {
             />
           )}
 
-          {activeTab === "scheduled" && <ScheduledJobs />}
+          {activeTab === "scheduled" && <ScheduledJobs products={shopifyProducts} />}
           {activeTab === "import" && (
             <ImportExport
               products={shopifyProducts}
