@@ -21,7 +21,6 @@ export function ApplyProgress({ open, totalChanges, onComplete }: ApplyProgressP
         if (p >= 100) {
           clearInterval(interval);
           setPhase("done");
-          setTimeout(onComplete, 1200);
           return 100;
         }
         return Math.min(p + Math.random() * 15 + 5, 100);
