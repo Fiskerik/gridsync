@@ -32,6 +32,9 @@ interface EditorToolbarProps {
   onSearchChange: (q: string) => void;
   visibleColumns: ColumnKey[];
   onColumnsChange: (cols: ColumnKey[]) => void;
+  showBefore: boolean;
+  onShowBeforeChange: (v: boolean) => void;
+  hasChanges: boolean;
 }
 
 export function EditorToolbar({
