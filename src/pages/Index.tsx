@@ -10,6 +10,7 @@ import { BulkActionsModal } from "@/components/GridSync/BulkActionsModal";
 import { ReviewPanel } from "@/components/GridSync/ReviewPanel";
 import { ChangeHistory } from "@/components/GridSync/ChangeHistory";
 import { ApplyProgress } from "@/components/GridSync/ApplyProgress";
+import { ScheduledJobs } from "@/components/GridSync/ScheduledJobs";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("editor");
