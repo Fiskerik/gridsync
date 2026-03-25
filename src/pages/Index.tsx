@@ -161,11 +161,13 @@ const Index = () => {
             />
           )}
 
-          {(activeTab === "scheduled" || activeTab === "import" || activeTab === "export-csv") && (
+          {activeTab === "scheduled" && <ScheduledJobs />}
+
+          {(activeTab === "import" || activeTab === "export-csv") && (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <p className="text-lg font-medium text-foreground mb-1">Coming Soon</p>
-                <p className="text-sm">{activeTab === "scheduled" ? "Scheduled jobs" : activeTab === "import" ? "Import / Export" : "CSV Export"} will be available in the next update.</p>
+                <p className="text-sm">{activeTab === "import" ? "Import / Export" : "CSV Export"} will be available in the next update.</p>
               </div>
             </div>
           )}
