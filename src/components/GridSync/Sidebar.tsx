@@ -1,5 +1,6 @@
-import { Zap, ChevronDown, X } from "lucide-react";
+import { Zap, ChevronDown, X, Store, Check } from "lucide-react";
 import { AdvancedFilters } from "@/pages/Index";
+import { ShopifyStore } from "@/hooks/useSupabaseProducts";
 
 interface SidebarProps {
   activeFilter: string;
@@ -17,6 +18,9 @@ interface SidebarProps {
     tags: string[];
     collections: string[];
   };
+  stores: ShopifyStore[];
+  selectedStoreIds: Set<string>;
+  onSelectedStoreIdsChange: (ids: Set<string>) => void;
 }
 
 const smartSelects = [
@@ -37,6 +41,9 @@ export function Sidebar({
   advancedFilters,
   onAdvancedFiltersChange,
   filterOptions,
+  stores,
+  selectedStoreIds,
+  onSelectedStoreIdsChange,
 }: SidebarProps) {
   const counts: Record<string, number> = {
     all: totalProducts,
@@ -225,9 +232,50 @@ export function Sidebar({
         </div>
       </div>
 
+      {/* Store Selector */}
       <div className="mt-auto px-4 pt-4 border-t border-border">
-        <p className="text-[11px] text-muted-foreground">Connected store</p>
-        <p className="text-xs text-foreground truncate">ea-consult-test-store</p>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+          <Store className="w-3 h-3" />
+          Stores
+        </h3>
+        {stores.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No stores connected</p>
+        ) : (
+          <div className="space-y-1">
+            {stores.map((store) => {
+              const isSelected = selectedStoreIds.has(store.id);
+              return (
+                <button
+                  key={store.id}
+                  onClick={() => {
+                    const next = new Set(selectedStoreIds);
+                    if (isSelected) {
+                      next.delete(store.id);
+                    } else {
+                      next.add(store.id);
+                    }
+                    onSelectedStoreIdsChange(next);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-muted/50 transition-colors"
+                >
+                  <span
+                    className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected
+                        ? "bg-primary border-primary"
+                        : "border-input"
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-foreground truncate">{store.store_name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{store.shop_domain}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </aside>
   );

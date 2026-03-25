@@ -5,14 +5,17 @@ import {
   FileText,
   CheckCircle2,
   AlertTriangle,
-  X,
   RefreshCw,
   ArrowUpFromLine,
   Store,
+  Plus,
+  Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/data/mockProducts";
+import { ShopifyStore } from "@/hooks/useSupabaseProducts";
 import { toast } from "sonner";
 
 type SyncStatus = "idle" | "syncing" | "pushing" | "done" | "error";
@@ -20,12 +23,16 @@ type SyncStatus = "idle" | "syncing" | "pushing" | "done" | "error";
 interface ImportExportProps {
   products: Product[];
   changedCells: Map<string, Record<string, unknown>>;
+  stores: ShopifyStore[];
   onImportComplete?: () => void;
   onPushComplete?: () => void;
-  importFromShopify: () => Promise<{ success: boolean; imported: number }>;
+  importFromShopify: (storeId: string) => Promise<{ success: boolean; imported: number }>;
   pushChangesToShopify: (
     changedCells: Map<string, Record<string, unknown>>
   ) => Promise<{ success: boolean; summary: { total: number; succeeded: number; failed: number } }>;
+  connectStore: (shopDomain: string) => Promise<string | null>;
+  disconnectStore: (storeId: string) => Promise<void>;
+  onStoreConnected?: () => void;
 }
 
 const EXPORTABLE_FIELDS: (keyof Product)[] = [
@@ -50,28 +57,81 @@ function productsToCsv(products: Product[]): string {
 export function ImportExport({
   products,
   changedCells,
+  stores,
   onImportComplete,
   onPushComplete,
   importFromShopify,
   pushChangesToShopify,
+  connectStore,
+  disconnectStore,
+  onStoreConnected,
 }: ImportExportProps) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
-  const [syncResult, setSyncResult] = useState<string>("");
+  const [syncResult, setSyncResult] = useState("");
+  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
+  const [showAddStore, setShowAddStore] = useState(false);
+  const [newShopDomain, setNewShopDomain] = useState("");
+  const [connecting, setConnecting] = useState(false);
 
-  const handleImportFromShopify = useCallback(async () => {
+  const handleConnectStore = useCallback(async () => {
+    if (!newShopDomain.trim()) {
+      toast.error("Please enter a shop domain");
+      return;
+    }
+    setConnecting(true);
+    try {
+      const authUrl = await connectStore(newShopDomain.trim());
+      if (authUrl) {
+        // Open OAuth in a popup
+        const popup = window.open(authUrl, "shopify-oauth", "width=600,height=700,scrollbars=yes");
+
+        // Listen for OAuth completion
+        const handleMessage = (event: MessageEvent) => {
+          if (event.data?.type === "shopify-oauth-success") {
+            window.removeEventListener("message", handleMessage);
+            toast.success(`Connected to ${event.data.storeName || event.data.shop}`);
+            setShowAddStore(false);
+            setNewShopDomain("");
+            onStoreConnected?.();
+          }
+        };
+        window.addEventListener("message", handleMessage);
+
+        // Cleanup if popup is closed manually
+        const checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener("message", handleMessage);
+            setConnecting(false);
+            onStoreConnected?.();
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Connection failed";
+      toast.error("Failed to connect store", { description: msg });
+    } finally {
+      setConnecting(false);
+    }
+  }, [newShopDomain, connectStore, onStoreConnected]);
+
+  const handleImportFromShopify = useCallback(async (storeId: string) => {
     setSyncStatus("syncing");
     setSyncResult("");
+    setSyncingStoreId(storeId);
     try {
-      const result = await importFromShopify();
-      setSyncResult(`${result.imported} products imported from Shopify`);
+      const result = await importFromShopify(storeId);
+      setSyncResult(`${result.imported} products imported`);
       setSyncStatus("done");
-      toast.success(`Imported ${result.imported} products from Shopify`);
+      toast.success(`Imported ${result.imported} products`);
       onImportComplete?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Import failed";
       setSyncResult(msg);
       setSyncStatus("error");
       toast.error("Import failed", { description: msg });
+    } finally {
+      setSyncingStoreId(null);
     }
   }, [importFromShopify, onImportComplete]);
 
@@ -118,39 +178,114 @@ export function ImportExport({
   return (
     <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-foreground">Shopify Sync</h2>
+        <h2 className="text-lg font-semibold text-foreground">Shopify Stores & Sync</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Import products from your Shopify store, push changes back, or export as CSV.
+          Manage your connected Shopify stores, import products, and push changes.
         </p>
       </div>
 
-      {/* Import from Shopify */}
+      {/* Connected Stores */}
       <div className="border border-border rounded-lg p-5 mb-6 bg-card">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Store className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-foreground">Import from Shopify</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Pull all products from your Shopify store into the editor. This replaces your current
-              product data with fresh data from Shopify.
-            </p>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Store className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Connected Stores</h3>
+              <p className="text-xs text-muted-foreground">
+                {stores.length} store{stores.length !== 1 ? "s" : ""} connected
+              </p>
+            </div>
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={handleImportFromShopify}
-            disabled={syncStatus === "syncing" || syncStatus === "pushing"}
+            onClick={() => setShowAddStore(!showAddStore)}
           >
-            {syncStatus === "syncing" ? (
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-            )}
-            {syncStatus === "syncing" ? "Importing..." : "Import Products"}
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Add Store
           </Button>
         </div>
+
+        {/* Add Store Form */}
+        {showAddStore && (
+          <div className="border border-dashed border-border rounded-lg p-4 mb-4 bg-muted/30">
+            <p className="text-xs text-muted-foreground mb-2">
+              Enter your Shopify store domain (e.g., <code className="text-foreground">my-store</code> or <code className="text-foreground">my-store.myshopify.com</code>)
+            </p>
+            <div className="flex gap-2">
+              <input
+                value={newShopDomain}
+                onChange={(e) => setNewShopDomain(e.target.value)}
+                placeholder="my-store.myshopify.com"
+                className="flex-1 px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                onKeyDown={(e) => e.key === "Enter" && handleConnectStore()}
+              />
+              <Button
+                size="sm"
+                onClick={handleConnectStore}
+                disabled={connecting || !newShopDomain.trim()}
+              >
+                {connecting ? (
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                {connecting ? "Connecting..." : "Connect via OAuth"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Store List */}
+        {stores.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No stores connected yet. Click "Add Store" to connect your first Shopify store.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {stores.map((store) => (
+              <div
+                key={store.id}
+                className="flex items-center gap-3 px-3 py-2.5 border border-border rounded-md bg-background"
+              >
+                <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {store.store_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {store.shop_domain}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleImportFromShopify(store.id)}
+                    disabled={syncStatus === "syncing" || syncStatus === "pushing"}
+                  >
+                    {syncingStoreId === store.id ? (
+                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Download className="w-3 h-3 mr-1" />
+                    )}
+                    Sync
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => disconnectStore(store.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Push to Shopify */}

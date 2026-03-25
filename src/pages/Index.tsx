@@ -42,9 +42,15 @@ const emptyAdvancedFilters: AdvancedFilters = {
 const Index = () => {
   const {
     products: shopifyProducts,
+    stores,
+    selectedStoreIds,
+    setSelectedStoreIds,
     loading,
     error,
     refetch,
+    refetchStores,
+    connectStore,
+    disconnectStore,
     importFromShopify,
     pushChangesToShopify,
   } = useSupabaseProducts();
@@ -251,6 +257,9 @@ const Index = () => {
           advancedFilters={advancedFilters}
           onAdvancedFiltersChange={setAdvancedFilters}
           filterOptions={filterOptions}
+          stores={stores}
+          selectedStoreIds={selectedStoreIds}
+          onSelectedStoreIdsChange={setSelectedStoreIds}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
           {activeTab === "editor" && (
@@ -335,6 +344,7 @@ const Index = () => {
             <ImportExport
               products={shopifyProducts}
               changedCells={changedCells}
+              stores={stores}
               onImportComplete={refetch}
               onPushComplete={() => {
                 setChangedCells(new Map());
@@ -342,9 +352,12 @@ const Index = () => {
               }}
               importFromShopify={importFromShopify}
               pushChangesToShopify={pushChangesToShopify}
+              connectStore={connectStore}
+              disconnectStore={disconnectStore}
+              onStoreConnected={refetchStores}
             />
           )}
-          {activeTab === "export-csv" && <ExportCsv />}
+          {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
         </div>
       </div>
 
