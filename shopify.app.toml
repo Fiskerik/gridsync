@@ -1,0 +1,17 @@
+client_id = "e34ec834892c9be98f0f3dcfffecef6b"
+name = "SyncroNice"
+application_url = "https://syncronice.lovable.app/"
+embedded = true
+
+[webhooks]
+api_version = "2026-01"
+
+[access_scopes]
+scopes = "read_products,write_products, read_inventory, write_inventory"
+optional_scopes = []
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://syncronice.lovable.app/*"
+]
