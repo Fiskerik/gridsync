@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Product } from "@/data/mockProducts";
 import { supabase } from "@/integrations/supabase/client";
+import { useShopifySessionToken } from "@/hooks/useShopifySessionToken";
 import { toast } from "sonner";
 
 export interface ShopifyStore {
@@ -23,6 +24,9 @@ export function useSupabaseProducts() {
   const [selectedStoreIds, setSelectedStoreIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Shopify session token support for embedded app checks
+  const { getSessionToken } = useShopifySessionToken();
 
   const fetchStores = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -164,6 +168,9 @@ export function useSupabaseProducts() {
       return { success: false, imported: 0 };
     }
 
+    // Get Shopify session token for embedded app verification
+    const shopifySessionToken = await getSessionToken();
+
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const res = await fetch(
       `https://${projectId}.supabase.co/functions/v1/sync-shopify`,
@@ -172,6 +179,10 @@ export function useSupabaseProducts() {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
+          // Pass Shopify session token so the edge function can verify embedded context
+          ...(shopifySessionToken
+            ? { "X-Shopify-Session-Token": shopifySessionToken }
+            : {}),
         },
         body: JSON.stringify({ store_id: storeId }),
       }
@@ -184,7 +195,7 @@ export function useSupabaseProducts() {
 
     await fetchProducts();
     return { success: true, imported: data.imported };
-  }, [fetchProducts]);
+  }, [fetchProducts, getSessionToken]);
 
   const pushChangesToShopify = useCallback(
     async (changedCells: Map<string, Record<string, unknown>>) => {
@@ -217,9 +228,14 @@ export function useSupabaseProducts() {
         throw new Error("No products with Shopify IDs found in changes");
       }
 
+      // Get Shopify session token for embedded app verification
+      const shopifySessionToken = await getSessionToken();
+
       // Use bulk mutations endpoint for large batches (>50), REST for small ones
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const hasInventoryChanges = changes.some((c) => c && "inventory" in (c as { changes: Record<string, unknown> }).changes);
+      const hasInventoryChanges = changes.some(
+        (c) => c && "inventory" in (c as { changes: Record<string, unknown> }).changes
+      );
       const useBulk = changes.length > 50 && !hasInventoryChanges;
       const endpoint = useBulk ? "bulk-shopify-mutations" : "push-shopify-changes";
 
@@ -230,6 +246,10 @@ export function useSupabaseProducts() {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
             "Content-Type": "application/json",
+            // Pass Shopify session token so the edge function can verify embedded context
+            ...(shopifySessionToken
+              ? { "X-Shopify-Session-Token": shopifySessionToken }
+              : {}),
           },
           body: JSON.stringify({ changes }),
         }
@@ -247,7 +267,7 @@ export function useSupabaseProducts() {
         results: (data.results || []) as ShopifyPushResult[],
       };
     },
-    [products, fetchProducts]
+    [products, fetchProducts, getSessionToken]
   );
 
   return {
