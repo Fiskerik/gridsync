@@ -17,6 +17,8 @@ import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
 import { useCategories } from "@/hooks/useCategories";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "@/components/GridSync/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw, GripVertical } from "lucide-react";
 import { toast } from "sonner";
