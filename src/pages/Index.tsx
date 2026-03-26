@@ -549,6 +549,8 @@ const Index = () => {
             connectStore={connectStore}
             disconnectStore={disconnectStore}
             onStoreConnected={refetchStores}
+            maxProducts={limits.maxProducts}
+            onUpgradeNeeded={() => setUpgradeModal({ open: true, feature: "More than " + limits.maxProducts + " products", requiredPlan: plan === "free" ? "starter" : "growth" })}
           />
         )}
         {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
