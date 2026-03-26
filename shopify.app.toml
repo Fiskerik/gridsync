@@ -1,3 +1,5 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
 client_id = "e34ec834892c9be98f0f3dcfffecef6b"
 name = "SyncroNice"
 application_url = "https://syncronice.lovable.app/"
@@ -7,11 +9,13 @@ embedded = true
 api_version = "2026-01"
 
 [access_scopes]
-scopes = "read_products,write_products, read_inventory, write_inventory"
-optional_scopes = []
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_inventory,read_inventory,read_products,write_products"
+optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://syncronice.lovable.app/*"
+  "https://mkmlpanblbakrsreutqw.supabase.co/functions/v1/shopify-oauth-callback",
+  "https://syncronice.lovable.app/auth"
 ]
