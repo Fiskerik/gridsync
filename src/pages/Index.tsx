@@ -20,7 +20,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradeModal } from "@/components/GridSync/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, RefreshCw, GripVertical } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   ResizablePanelGroup,
@@ -91,7 +91,11 @@ const Index = () => {
 
   // Plan & upgrade modal
   const { plan, limits, canUseTrial, startTrial } = usePlan();
-  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; requiredPlan: "starter" | "growth" }>({ open: false, feature: "", requiredPlan: "starter" });
+  const [upgradeModal, setUpgradeModal] = useState<{
+    open: boolean;
+    feature: string;
+    requiredPlan: "starter" | "growth";
+  }>({ open: false, feature: "", requiredPlan: "starter" });
 
   const filterOptions = useMemo(() => {
     const vendors = [...new Set(shopifyProducts.map((p) => p.vendor).filter(Boolean))].sort();
@@ -178,6 +182,22 @@ const Index = () => {
     (action: string, params: Record<string, string>) => {
       const ids = Array.from(selectedIds);
 
+      // ── Plan enforcement ──────────────────────────────────────────────────
+      // Free plan: max 20 products total. Block bulk actions that would exceed
+      // what the user is allowed to have, using selectedIds as the proxy.
+      if (
+        limits.maxProducts !== Infinity &&
+        ids.length > limits.maxProducts
+      ) {
+        setUpgradeModal({
+          open: true,
+          feature: `Bulk edit more than ${limits.maxProducts} products at once`,
+          requiredPlan: plan === "free" ? "starter" : "growth",
+        });
+        return;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       // Handle category actions
       if (action === "set_category") {
         const categoryId = params.categoryId;
@@ -217,7 +237,7 @@ const Index = () => {
         return next;
       });
     },
-    [selectedIds, shopifyProducts, assignCategoryToMany, unassignCategoryFromMany]
+    [selectedIds, shopifyProducts, assignCategoryToMany, unassignCategoryFromMany, limits, plan]
   );
 
   const handleSyncStores = useCallback(async (storeIds: string[]) => {
@@ -270,9 +290,7 @@ const Index = () => {
       });
 
       if (changeRows.length > 0) {
-        await supabase
-          .from("edit_history_changes")
-          .insert(changeRows);
+        await supabase.from("edit_history_changes").insert(changeRows);
       }
     } catch (err) {
       console.error("Failed to save edit history:", err);
@@ -499,7 +517,21 @@ const Index = () => {
             <StatusBar
               selectedCount={selectedIds.size}
               stagedChanges={stagedChanges}
-              onBulkActions={() => setBulkModalOpen(true)}
+              onBulkActions={() => {
+                // Plan enforcement: free users capped at 20 products selected
+                if (
+                  limits.maxProducts !== Infinity &&
+                  selectedIds.size > limits.maxProducts
+                ) {
+                  setUpgradeModal({
+                    open: true,
+                    feature: `Bulk edit more than ${limits.maxProducts} products at once`,
+                    requiredPlan: plan === "free" ? "starter" : "growth",
+                  });
+                  return;
+                }
+                setBulkModalOpen(true);
+              }}
               onReviewApply={() => setReviewOpen(true)}
               onDiscardAll={() => setChangedCells(new Map())}
             />
@@ -533,9 +565,13 @@ const Index = () => {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground p-8">
               <p className="text-lg font-medium text-foreground">Scheduled Jobs</p>
-              <p className="text-sm text-center max-w-md">Schedule automated price changes, tag updates, and more. Available on the Growth plan.</p>
+              <p className="text-sm text-center max-w-md">
+                Schedule automated price changes, tag updates, and more. Available on the Growth plan.
+              </p>
               <button
-                onClick={() => setUpgradeModal({ open: true, feature: "Scheduled Jobs", requiredPlan: "growth" })}
+                onClick={() =>
+                  setUpgradeModal({ open: true, feature: "Scheduled Jobs", requiredPlan: "growth" })
+                }
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
               >
                 Upgrade to Growth
@@ -543,6 +579,7 @@ const Index = () => {
             </div>
           )
         )}
+
         {activeTab === "import" && (
           <ImportExport
             products={shopifyProducts}
@@ -559,9 +596,16 @@ const Index = () => {
             disconnectStore={disconnectStore}
             onStoreConnected={refetchStores}
             maxProducts={limits.maxProducts}
-            onUpgradeNeeded={() => setUpgradeModal({ open: true, feature: "More than " + limits.maxProducts + " products", requiredPlan: plan === "free" ? "starter" : "growth" })}
+            onUpgradeNeeded={() =>
+              setUpgradeModal({
+                open: true,
+                feature: "More than " + limits.maxProducts + " products",
+                requiredPlan: plan === "free" ? "starter" : "growth",
+              })
+            }
           />
         )}
+
         {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
         {activeTab === "profile" && <ProfilePage />}
       </>
