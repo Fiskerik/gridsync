@@ -48,6 +48,8 @@ interface ImportExportProps {
   connectStore: (shopDomain: string) => Promise<string | null>;
   disconnectStore: (storeId: string) => Promise<void>;
   onStoreConnected?: () => void;
+  maxProducts?: number;
+  onUpgradeNeeded?: () => void;
 }
 
 const EXPORTABLE_FIELDS: (keyof Product)[] = [
@@ -80,6 +82,8 @@ export function ImportExport({
   connectStore,
   disconnectStore,
   onStoreConnected,
+  maxProducts,
+  onUpgradeNeeded,
 }: ImportExportProps) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncResult, setSyncResult] = useState("");
@@ -142,11 +146,31 @@ export function ImportExport({
   }, [deleteConfirmStore, disconnectStore]);
 
   const handleImportFromShopify = useCallback(async (storeId: string) => {
+    // Check product limit before importing
+    if (maxProducts && maxProducts !== Infinity) {
+      const currentCount = products.length;
+      if (currentCount >= maxProducts) {
+        toast.warning(`You've reached the ${maxProducts}-product limit on your current plan.`, {
+          description: "Upgrade to import more products.",
+          action: onUpgradeNeeded ? { label: "Upgrade", onClick: onUpgradeNeeded } : undefined,
+        });
+        return;
+      }
+    }
+
     setSyncStatus("syncing");
     setSyncResult("");
     setSyncingStoreId(storeId);
     try {
       const result = await importFromShopify(storeId);
+
+      // Warn if import was capped by plan limit
+      if (maxProducts && maxProducts !== Infinity && products.length + result.imported > maxProducts) {
+        toast.warning(`Only the first ${maxProducts} products were imported. Upgrade to import more.`, {
+          action: onUpgradeNeeded ? { label: "Upgrade", onClick: onUpgradeNeeded } : undefined,
+        });
+      }
+
       setSyncResult(`${result.imported} products imported`);
       setSyncStatus("done");
       toast.success(`Imported ${result.imported} products`);
@@ -159,7 +183,7 @@ export function ImportExport({
     } finally {
       setSyncingStoreId(null);
     }
-  }, [importFromShopify, onImportComplete]);
+  }, [importFromShopify, onImportComplete, maxProducts, products.length, onUpgradeNeeded]);
 
   const handlePushToShopify = useCallback(async () => {
     if (changedCells.size === 0) {
@@ -396,7 +420,7 @@ export function ImportExport({
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  This will permanently disconnect <strong className="text-foreground">{deleteConfirmStore?.store_name}</strong> and remove all its synced products from GridSync.
+                  This will permanently disconnect <strong className="text-foreground">{deleteConfirmStore?.store_name}</strong> and remove all its synced products from SyncroNice.
                 </p>
                 <p>
                   To confirm, type the store name below:

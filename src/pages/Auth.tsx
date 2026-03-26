@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import syncroniceLogo from "@/assets/syncronice-logo.jpg";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -63,15 +64,18 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-3">
+            <img src={syncroniceLogo} alt="SyncroNice" className="w-16 h-16 rounded-xl" />
+          </div>
           <CardTitle className="text-2xl font-bold text-foreground">
-            {forgotPassword ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}
+            {forgotPassword ? "Reset Password" : isLogin ? "Welcome to SyncroNice" : "Create Account"}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             {forgotPassword
               ? "Enter your email to receive a reset link"
               : isLogin
-              ? "Sign in to manage your products"
-              : "Sign up to get started"}
+              ? "Safe Bulk Editor — Preview, Validate, Undo"
+              : "Sign up to start editing your Shopify products safely"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -128,6 +132,11 @@ const Auth = () => {
               >
                 {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
               </button>
+            </div>
+            <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-2">
+              <Link to="/privacy" className="hover:text-foreground hover:underline">Privacy Policy</Link>
+              <span>·</span>
+              <Link to="/terms" className="hover:text-foreground hover:underline">Terms & Conditions</Link>
             </div>
           </div>
         </CardContent>
