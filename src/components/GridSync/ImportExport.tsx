@@ -82,6 +82,8 @@ export function ImportExport({
   connectStore,
   disconnectStore,
   onStoreConnected,
+  maxProducts,
+  onUpgradeNeeded,
 }: ImportExportProps) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [syncResult, setSyncResult] = useState("");
