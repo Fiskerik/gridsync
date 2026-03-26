@@ -570,6 +570,3 @@ const Index = () => {
 };
 
 export default Index;
-
-// Upgrade modal rendered at top level - need to add to component
-
