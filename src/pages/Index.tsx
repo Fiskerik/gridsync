@@ -89,6 +89,10 @@ const Index = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyAdvancedFilters);
 
+  // Plan & upgrade modal
+  const { plan, limits, canUseTrial, startTrial } = usePlan();
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; requiredPlan: "starter" | "growth" }>({ open: false, feature: "", requiredPlan: "starter" });
+
   const filterOptions = useMemo(() => {
     const vendors = [...new Set(shopifyProducts.map((p) => p.vendor).filter(Boolean))].sort();
     const types = [...new Set(shopifyProducts.map((p) => p.productType).filter(Boolean))].sort();
