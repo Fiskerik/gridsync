@@ -17,6 +17,8 @@ import { ImportExport } from "@/components/GridSync/ImportExport";
 import { ExportCsv } from "@/components/GridSync/ExportCsv";
 import { useSupabaseProducts } from "@/hooks/useSupabaseProducts";
 import { useCategories } from "@/hooks/useCategories";
+import { usePlan } from "@/hooks/usePlan";
+import { UpgradeModal } from "@/components/GridSync/UpgradeModal";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCw, GripVertical } from "lucide-react";
 import { toast } from "sonner";
@@ -86,6 +88,10 @@ const Index = () => {
   const [showBefore, setShowBefore] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(emptyAdvancedFilters);
+
+  // Plan & upgrade modal
+  const { plan, limits, canUseTrial, startTrial } = usePlan();
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; requiredPlan: "starter" | "growth" }>({ open: false, feature: "", requiredPlan: "starter" });
 
   const filterOptions = useMemo(() => {
     const vendors = [...new Set(shopifyProducts.map((p) => p.vendor).filter(Boolean))].sort();
@@ -416,6 +422,15 @@ const Index = () => {
         totalChanges={stagedChanges}
         onComplete={handleApplyComplete}
       />
+
+      <UpgradeModal
+        open={upgradeModal.open}
+        onClose={() => setUpgradeModal((p) => ({ ...p, open: false }))}
+        feature={upgradeModal.feature}
+        requiredPlan={upgradeModal.requiredPlan}
+        canUseTrial={canUseTrial}
+        onStartTrial={startTrial}
+      />
     </div>
   );
 
@@ -508,12 +523,25 @@ const Index = () => {
         )}
 
         {activeTab === "scheduled" && (
-          <ScheduledJobs
-            products={shopifyProducts}
-            categories={categories}
-            getProductsByCategory={getProductsByCategory}
-            getProductCategories={getProductCategories}
-          />
+          limits.scheduledJobs ? (
+            <ScheduledJobs
+              products={shopifyProducts}
+              categories={categories}
+              getProductsByCategory={getProductsByCategory}
+              getProductCategories={getProductCategories}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground p-8">
+              <p className="text-lg font-medium text-foreground">Scheduled Jobs</p>
+              <p className="text-sm text-center max-w-md">Schedule automated price changes, tag updates, and more. Available on the Growth plan.</p>
+              <button
+                onClick={() => setUpgradeModal({ open: true, feature: "Scheduled Jobs", requiredPlan: "growth" })}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                Upgrade to Growth
+              </button>
+            </div>
+          )
         )}
         {activeTab === "import" && (
           <ImportExport
@@ -530,6 +558,8 @@ const Index = () => {
             connectStore={connectStore}
             disconnectStore={disconnectStore}
             onStoreConnected={refetchStores}
+            maxProducts={limits.maxProducts}
+            onUpgradeNeeded={() => setUpgradeModal({ open: true, feature: "More than " + limits.maxProducts + " products", requiredPlan: plan === "free" ? "starter" : "growth" })}
           />
         )}
         {activeTab === "export-csv" && <ExportCsv products={shopifyProducts} />}
