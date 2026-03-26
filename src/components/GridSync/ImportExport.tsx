@@ -48,6 +48,8 @@ interface ImportExportProps {
   connectStore: (shopDomain: string) => Promise<string | null>;
   disconnectStore: (storeId: string) => Promise<void>;
   onStoreConnected?: () => void;
+  maxProducts?: number;
+  onUpgradeNeeded?: () => void;
 }
 
 const EXPORTABLE_FIELDS: (keyof Product)[] = [

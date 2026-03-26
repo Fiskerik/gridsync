@@ -422,6 +422,15 @@ const Index = () => {
         totalChanges={stagedChanges}
         onComplete={handleApplyComplete}
       />
+
+      <UpgradeModal
+        open={upgradeModal.open}
+        onClose={() => setUpgradeModal((p) => ({ ...p, open: false }))}
+        feature={upgradeModal.feature}
+        requiredPlan={upgradeModal.requiredPlan}
+        canUseTrial={canUseTrial}
+        onStartTrial={startTrial}
+      />
     </div>
   );
 
