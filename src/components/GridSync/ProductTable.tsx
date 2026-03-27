@@ -379,6 +379,15 @@ export function ProductTable({
         return <span className="text-xs text-muted-foreground">{p.productType}</span>;
       case "variants":
         return <span className="text-xs text-muted-foreground">{p.variants}</span>;
+      case "updatedAt": {
+        if (!p.updatedAt) return <span className="text-xs text-muted-foreground">—</span>;
+        const date = new Date(p.updatedAt);
+        return (
+          <span className="text-xs text-muted-foreground" title={format(date, "PPpp")}>
+            {formatDistanceToNow(date, { addSuffix: true })}
+          </span>
+        );
+      }
       default:
         return null;
     }
