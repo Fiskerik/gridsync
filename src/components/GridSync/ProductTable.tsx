@@ -198,6 +198,7 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
   seoTitle: 200,
   productType: 100,
   variants: 80,
+  updatedAt: 140,
 };
 
 const columnLabels: Record<ColumnKey, string> = {
@@ -215,6 +216,7 @@ const columnLabels: Record<ColumnKey, string> = {
   seoTitle: "SEO Title",
   productType: "Type",
   variants: "Variants",
+  updatedAt: "Last edited",
 };
 
 function ResizableHeader({
