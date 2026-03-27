@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
             }
 
             locationId = firstLocation.id;
-            locationCache.set(store.id, locationId);
+            locationCache.set(store.id, locationId as number);
           }
 
           const inventoryRes = await fetch(
