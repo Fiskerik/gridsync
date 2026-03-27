@@ -33,22 +33,24 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    // Resolve user: embedded sends Shopify token as Authorization + Supabase token as X-Supabase-Auth
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const supabaseAuthHeader = req.headers.get("X-Supabase-Auth") ?? "";
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const tokenToVerify = supabaseAuthHeader || authHeader.replace("Bearer ", "");
+
+    if (!tokenToVerify) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const {
-      data: { user },
-      error: authError,
-    } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(tokenToVerify);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
