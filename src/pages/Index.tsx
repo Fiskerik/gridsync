@@ -296,7 +296,7 @@ const Index = () => {
           preparedRows.push({
             product_id: productId,
             field,
-            old_value: normalizeHistoryValue(product ? (product as Record<string, unknown>)[field] : null),
+            old_value: normalizeHistoryValue(product ? (product as unknown as Record<string, unknown>)[field] : null),
             new_value: normalizeHistoryValue(newValue),
           });
         });
