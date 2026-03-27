@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-supabase-auth, x-shopify-session-token",
 };
 
 const SHOPIFY_API_VERSION = "2025-07";
@@ -30,15 +30,40 @@ interface ShopifyProduct {
   }[];
 }
 
+/**
+ * Resolve the Supabase user from either:
+ *   - Standalone:  Authorization: Bearer <supabase-token>
+ *   - Embedded:    Authorization: Bearer <shopify-session-token>
+ *                  X-Supabase-Auth: <supabase-token>
+ */
+async function resolveUser(req: Request) {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const supabaseAuthHeader = req.headers.get("X-Supabase-Auth") ?? "";
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const anonClient = createClient(supabaseUrl, anonKey);
+
+  const tokenToVerify = supabaseAuthHeader
+    ? supabaseAuthHeader
+    : authHeader.replace("Bearer ", "");
+
+  if (!tokenToVerify) return { user: null };
+
+  const { data: { user } } = await anonClient.auth.getUser(tokenToVerify);
+  return { user };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+    const { user } = await resolveUser(req);
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -46,19 +71,6 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Verify the user
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const { data: { user }, error: authError } = await anonClient.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const body = await req.json();
     const storeId: string | undefined = body.store_id;
@@ -70,7 +82,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get store credentials from database
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
     const { data: store, error: storeError } = await supabaseClient
       .from("shopify_stores")
@@ -89,7 +100,6 @@ Deno.serve(async (req) => {
     const shopifyToken = store.access_token;
     const shopDomain = store.shop_domain;
 
-    // Fetch all products from Shopify Admin API (paginated)
     const allProducts: ShopifyProduct[] = [];
     let pageInfo: string | null = null;
     let hasNext = true;
@@ -124,7 +134,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build rows
     const rows = allProducts.map((p) => {
       const firstVariant = p.variants?.[0];
       const tags = p.tags ? p.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
@@ -155,7 +164,6 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Delete existing products for this user+store, then insert fresh
     await supabaseClient.from("products").delete().eq("user_id", user.id).eq("store_id", storeId);
 
     if (rows.length > 0) {
