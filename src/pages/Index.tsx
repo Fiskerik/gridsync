@@ -259,11 +259,50 @@ const Index = () => {
 
   const saveEditHistory = useCallback(async (cells: Map<string, Record<string, unknown>>) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const normalizeHistoryValue = (value: unknown): Json => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === "number") return Number.isFinite(value) ? value : null;
+        if (typeof value === "string" || typeof value === "boolean") return value;
+        if (Array.isArray(value)) return value.map((item) => normalizeHistoryValue(item));
+        if (value instanceof Date) return value.toISOString();
+        if (typeof value === "object") {
+          const normalizedObject: Record<string, Json> = {};
+          Object.entries(value as Record<string, unknown>).forEach(([key, nestedValue]) => {
+            normalizedObject[key] = normalizeHistoryValue(nestedValue);
+          });
+          return normalizedObject;
+        }
+        return String(value);
+      };
 
       const allFields = new Set<string>();
-      cells.forEach((fields) => Object.keys(fields).forEach((f) => allFields.add(f)));
+      const preparedRows: Array<{
+        product_id: string;
+        field: string;
+        old_value: Json;
+        new_value: Json;
+      }> = [];
+
+      Array.from(cells.entries()).forEach(([productId, fields]) => {
+        const product = shopifyProducts.find((p) => p.id === productId);
+
+        Object.entries(fields).forEach(([field, newValue]) => {
+          allFields.add(field);
+          preparedRows.push({
+            product_id: productId,
+            field,
+            old_value: normalizeHistoryValue(product ? (product as unknown as Record<string, unknown>)[field] : null),
+            new_value: normalizeHistoryValue(newValue),
+          });
+        });
+      });
+
+      if (preparedRows.length === 0) return false;
 
       const { data: historyEntry, error: histErr } = await supabase
         .from("edit_history")
@@ -278,22 +317,18 @@ const Index = () => {
 
       if (histErr || !historyEntry) throw histErr;
 
-      const changeRows = Array.from(cells.entries()).flatMap(([productId, fields]) => {
-        const product = shopifyProducts.find((p) => p.id === productId);
-        return Object.entries(fields).map(([field, newValue]) => ({
-          edit_history_id: historyEntry.id,
-          product_id: productId,
-          field,
-          old_value: (product ? (product as unknown as Record<string, unknown>)[field] ?? null : null) as Json,
-          new_value: (newValue ?? null) as Json,
-        }));
-      });
+      const changeRows = preparedRows.map((row) => ({
+        ...row,
+        edit_history_id: historyEntry.id,
+      }));
 
-      if (changeRows.length > 0) {
-        await supabase.from("edit_history_changes").insert(changeRows);
-      }
+      const { error: changesErr } = await supabase.from("edit_history_changes").insert(changeRows);
+      if (changesErr) throw changesErr;
+
+      return true;
     } catch (err) {
       console.error("Failed to save edit history:", err);
+      return false;
     }
   }, [shopifyProducts]);
 
@@ -308,7 +343,10 @@ const Index = () => {
       });
 
       if (succeededChanges.size > 0) {
-        await saveEditHistory(succeededChanges);
+        const snapshotSaved = await saveEditHistory(succeededChanges);
+        if (!snapshotSaved) {
+          toast.warning("Products were updated, but the history snapshot could not be saved");
+        }
       }
 
       if (result.summary.failed > 0) {
