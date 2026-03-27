@@ -105,11 +105,11 @@ Deno.serve(async (req) => {
     let hasNext = true;
 
     while (hasNext) {
-      const url = pageInfo
+      const url: string = pageInfo
         ? pageInfo
         : `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=250`;
 
-      const res = await fetch(url, {
+      const res: Response = await fetch(url, {
         headers: {
           "X-Shopify-Access-Token": shopifyToken,
           "Content-Type": "application/json",
