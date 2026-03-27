@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export type ColumnKey = "image" | "title" | "sku" | "price" | "compareAtPrice" | "inventory" | "status" | "vendor" | "category" | "tags" | "seoTitle" | "description" | "productType" | "variants";
+export type ColumnKey = "image" | "title" | "sku" | "price" | "compareAtPrice" | "inventory" | "status" | "vendor" | "category" | "tags" | "seoTitle" | "description" | "productType" | "variants" | "updatedAt";
 
 export const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "image", label: "Image" },
@@ -34,6 +34,7 @@ export const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "seoTitle", label: "SEO Title" },
   { key: "productType", label: "Type" },
   { key: "variants", label: "Variants" },
+  { key: "updatedAt", label: "Last edited" },
 ];
 
 export const DEFAULT_VISIBLE: ColumnKey[] = ["image", "title", "sku", "price", "compareAtPrice", "inventory", "status", "vendor", "category"];

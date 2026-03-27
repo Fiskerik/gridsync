@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { format, formatDistanceToNow } from "date-fns";
 import { Product } from "@/data/mockProducts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnKey } from "@/components/GridSync/EditorToolbar";
@@ -197,6 +198,7 @@ const defaultColumnWidths: Record<ColumnKey, number> = {
   seoTitle: 200,
   productType: 100,
   variants: 80,
+  updatedAt: 140,
 };
 
 const columnLabels: Record<ColumnKey, string> = {
@@ -214,6 +216,7 @@ const columnLabels: Record<ColumnKey, string> = {
   seoTitle: "SEO Title",
   productType: "Type",
   variants: "Variants",
+  updatedAt: "Last edited",
 };
 
 function ResizableHeader({
@@ -376,6 +379,15 @@ export function ProductTable({
         return <span className="text-xs text-muted-foreground">{p.productType}</span>;
       case "variants":
         return <span className="text-xs text-muted-foreground">{p.variants}</span>;
+      case "updatedAt": {
+        if (!p.updatedAt) return <span className="text-xs text-muted-foreground">—</span>;
+        const date = new Date(p.updatedAt);
+        return (
+          <span className="text-xs text-muted-foreground" title={format(date, "PPpp")}>
+            {formatDistanceToNow(date, { addSuffix: true })}
+          </span>
+        );
+      }
       default:
         return null;
     }
