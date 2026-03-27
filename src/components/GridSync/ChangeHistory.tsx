@@ -55,6 +55,12 @@ export function ChangeHistory() {
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setHistory([]);
+        return;
+      }
+
       const { data: entries, error: entriesErr } = await supabase
         .from("edit_history")
         .select("*")
