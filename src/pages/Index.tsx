@@ -385,7 +385,18 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <TabNav activeTab={activeTab} onTabChange={setActiveTab} pendingChanges={stagedChanges} />
+      <TabNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        pendingChanges={stagedChanges}
+        onUpgradeClick={(targetPlan) =>
+          setUpgradeModal({
+            open: true,
+            feature: targetPlan === "growth" ? "Growth plan" : "Starter plan",
+            requiredPlan: targetPlan,
+          })
+        }
+      />
       <div className="flex flex-1 overflow-hidden">
         {/* Mobile sidebar */}
         <Sidebar
