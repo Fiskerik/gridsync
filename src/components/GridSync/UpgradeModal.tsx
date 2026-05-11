@@ -73,17 +73,24 @@ export function UpgradeModal({ open, onClose, feature, requiredPlan, canUseTrial
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          {canUseTrial ? (
+          {canUseTrial && (
             <AlertDialogAction onClick={handleTrial}>
               Start 14-day Free Trial
             </AlertDialogAction>
-          ) : (
-            <AlertDialogAction disabled className="opacity-60">
-              Trial already used — Contact us to upgrade
-            </AlertDialogAction>
           )}
+          <AlertDialogAction
+            onClick={() =>
+              window.open(
+                "https://admin.shopify.com/charges/syncronice/pricing_plans",
+                "_blank",
+                "noopener,noreferrer"
+              )
+            }
+          >
+            Upgrade via Shopify
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
