@@ -98,15 +98,13 @@ Deno.serve(async (req) => {
       }
     } else {
       // Insert new store
-      const { error: insertError } = await supabaseClient
-        .from("shopify_stores")
-        .insert({
-          user_id: stateData.userId,
-          shop_domain: shop,
-          store_name: storeName,
-          access_token: accessToken,
-          scopes,
-        });
+      const { error: insertError } = await supabaseClient.from("shopify_stores").insert({
+        user_id: stateData.userId,
+        shop_domain: shop,
+        store_name: storeName,
+        access_token: accessToken,
+        scopes,
+      });
 
       if (insertError) {
         console.error("Failed to save store:", insertError);
@@ -212,7 +210,10 @@ Deno.serve(async (req) => {
 
     return new Response(html, {
       status: 200,
-      headers: { "Content-Type": "text/html" },
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
   } catch (err) {
     console.error("shopify-oauth-callback error:", err);
