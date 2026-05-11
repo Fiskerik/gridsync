@@ -13,6 +13,9 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.tsx";
 import Terms from "./pages/Terms.tsx";
+import ShopifyCallback from "./pages/ShopifyCallback.tsx";
+
+
 
 const queryClient = new QueryClient();
 
@@ -29,7 +32,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<Terms />} />
-
+              <Route path="/shopify-callback" element={<ShopifyCallback />} />  
               <Route
                 path="/"
                 element={
