@@ -375,7 +375,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      start_subscription_trial: {
+        Args: { _target_plan: Database["public"]["Enums"]["plan_type"] }
+        Returns: {
+          created_at: string
+          ends_at: string | null
+          id: string
+          plan: Database["public"]["Enums"]["plan_type"]
+          started_at: string
+          trial_ends_at: string | null
+          trial_started_at: string | null
+          trial_used: boolean
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       plan_type: "free" | "starter" | "growth"
