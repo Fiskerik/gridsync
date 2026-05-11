@@ -62,19 +62,11 @@ export function usePlan() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return false;
 
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 14);
-
-    const { error } = await supabase
-      .from("subscriptions")
-      .update({
-        plan: targetPlan,
-        trial_started_at: new Date().toISOString(),
-        trial_ends_at: trialEnd.toISOString(),
-        trial_used: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", session.user.id);
+    // Trial activation runs server-side via a SECURITY DEFINER RPC so users
+    // cannot self-promote to paid plans by directly updating the subscriptions row.
+    const { error } = await supabase.rpc("start_subscription_trial", {
+      _target_plan: targetPlan,
+    });
 
     if (!error) {
       await fetchSubscription();
