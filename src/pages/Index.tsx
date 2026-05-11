@@ -389,13 +389,14 @@ const Index = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingChanges={stagedChanges}
-        onUpgradeClick={(targetPlan) =>
+        onUpgradeClick={(targetPlan) => {
+          if (targetPlan === "free") return;
           setUpgradeModal({
             open: true,
             feature: targetPlan === "growth" ? "Growth plan" : "Starter plan",
             requiredPlan: targetPlan,
-          })
-        }
+          });
+        }}
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Mobile sidebar */}
