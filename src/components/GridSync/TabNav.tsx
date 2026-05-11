@@ -1,8 +1,9 @@
 import { InlineStack, Icon } from "@shopify/polaris";
 import { ExitIcon, PersonIcon } from "@shopify/polaris-icons";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlan, PLAN_LIMITS, PlanType } from "@/hooks/usePlan";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Crown } from "lucide-react";
 import syncroniceLogo from "@/assets/syncronice-logo.jpg";
 
 type TabId = "editor" | "history" | "scheduled" | "import" | "export-csv" | "review" | "profile";
@@ -20,12 +21,18 @@ interface TabNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
   pendingChanges: number;
+  onUpgradeClick?: (targetPlan: PlanType) => void;
 }
 
-export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) {
+export function TabNav({ activeTab, onTabChange, pendingChanges, onUpgradeClick }: TabNavProps) {
   const { user, signOut } = useAuth();
+  const { plan } = usePlan();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const planLabel = PLAN_LIMITS[plan as PlanType]?.label.split(" — ")[0] ?? "Free";
+  const nextPlan: PlanType | null =
+    plan === "free" ? "starter" : plan === "starter" ? "growth" : null;
 
   const handleTabChange = (tab: TabId) => {
     onTabChange(tab);
@@ -102,6 +109,24 @@ export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) 
             >
               <Icon source={PersonIcon} />
               <span className="truncate max-w-[120px] md:max-w-[160px]">{user.user_metadata?.display_name || user.email}</span>
+            </button>
+          )}
+          {user && (
+            <span
+              className="hidden sm:inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded"
+              title={`Current plan: ${planLabel}`}
+            >
+              {planLabel}
+            </span>
+          )}
+          {user && nextPlan && onUpgradeClick && (
+            <button
+              onClick={() => onUpgradeClick(nextPlan)}
+              className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors"
+              title={`Upgrade to ${PLAN_LIMITS[nextPlan].label}`}
+            >
+              <Crown className="w-3 h-3" />
+              Upgrade
             </button>
           )}
           <button

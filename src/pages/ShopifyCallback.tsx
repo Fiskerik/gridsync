@@ -1,31 +1,42 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import syncroniceLogo from "@/assets/syncronice-logo.jpg";
 
 const ShopifyCallback = () => {
   const [searchParams] = useSearchParams();
   const shop = searchParams.get("shop") || "";
   const storeName = searchParams.get("storeName") || "";
-  const [closing, setClosing] = useState(false);
+  const [autoClosed, setAutoClosed] = useState(false);
 
   useEffect(() => {
     if (!shop) return;
 
-    if (window.opener) {
-      // Send success message to the parent window
-      window.opener.postMessage(
-        { type: "shopify-oauth-success", shop, storeName },
-        "*"
-      );
-      setClosing(true);
-      setTimeout(() => window.close(), 2000);
-    } else {
-      // Opened directly (not as a popup), redirect to home
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2500);
+    // Notify the opener (if any) that OAuth succeeded
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(
+          { type: "shopify-oauth-success", shop, storeName },
+          "*"
+        );
+      }
+    } catch {
+      // ignore cross-origin issues
     }
+
+    // Try to auto-close the popup. Browsers may block window.close() for
+    // top-level windows the user did not explicitly open via script — in that
+    // case we just leave the success message visible and let the user close it.
+    const timer = setTimeout(() => {
+      try {
+        window.close();
+        setAutoClosed(true);
+      } catch {
+        // ignore
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, [shop, storeName]);
 
   return (
@@ -52,13 +63,11 @@ const ShopifyCallback = () => {
         )}
 
         <p className="text-sm text-muted-foreground mb-6">
-          Your Shopify store has been successfully linked to SyncroNice. You can
-          now import and manage your products.
+          Your Shopify store has been successfully linked to SyncroNice.
         </p>
 
-        <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          {closing ? "Closing this window…" : "Redirecting back to the app…"}
+        <p className="text-xs text-muted-foreground">
+          {autoClosed ? "Closing…" : "You can now close this window."}
         </p>
       </div>
     </div>
