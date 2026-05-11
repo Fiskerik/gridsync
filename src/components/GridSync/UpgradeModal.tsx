@@ -55,7 +55,8 @@ export function UpgradeModal({ open, onClose, feature, requiredPlan, canUseTrial
               <ul className="text-sm space-y-1 pl-4 list-disc text-muted-foreground">
                 <li>Up to 500 products</li>
                 <li>Full editor with CSV diff preview</li>
-                <li>Change history with rollback</li>
+                <li>Change history with rollback (30 days)</li>
+                <li>Connect up to 3 Shopify stores</li>
               </ul>
             )}
             {requiredPlan === "growth" && (
@@ -63,8 +64,13 @@ export function UpgradeModal({ open, onClose, feature, requiredPlan, canUseTrial
                 <li>Unlimited products</li>
                 <li>Scheduled jobs & bulk price rules</li>
                 <li>Google Sheets sync</li>
+                <li>Unlimited connected Shopify stores</li>
+                <li>Change history with rollback (180 days)</li>
               </ul>
             )}
+            <p className="text-xs text-muted-foreground pt-2 border-t">
+              Billing is handled securely through Shopify — the charge appears on your regular Shopify invoice.
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
