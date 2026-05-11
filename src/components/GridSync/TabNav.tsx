@@ -21,12 +21,18 @@ interface TabNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
   pendingChanges: number;
+  onUpgradeClick?: (targetPlan: PlanType) => void;
 }
 
-export function TabNav({ activeTab, onTabChange, pendingChanges }: TabNavProps) {
+export function TabNav({ activeTab, onTabChange, pendingChanges, onUpgradeClick }: TabNavProps) {
   const { user, signOut } = useAuth();
+  const { plan } = usePlan();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const planLabel = PLAN_LIMITS[plan as PlanType]?.label.split(" — ")[0] ?? "Free";
+  const nextPlan: PlanType | null =
+    plan === "free" ? "starter" : plan === "starter" ? "growth" : null;
 
   const handleTabChange = (tab: TabId) => {
     onTabChange(tab);
